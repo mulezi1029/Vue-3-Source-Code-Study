@@ -6,14 +6,16 @@ function isObject(obj) {
 // packages/reactivity/src/effect.ts
 var activeEffect;
 var ReactieEffect = class {
-  constructor(fn) {
+  constructor(fn, scheduler) {
     this.fn = fn;
+    this.scheduler = scheduler;
     // 控制这个函数是否需要响应性的开关标志
     this.active = true;
     this.parent = null;
     this.deps = [];
   }
   // 记录该响应性函数依赖的响应性属性的集合
+  // 执行副作用函数，并在副作用函数执行过程中收集依赖
   run() {
     if (!this.active) {
       return this.fn();
@@ -28,10 +30,21 @@ var ReactieEffect = class {
       this.parent = null;
     }
   }
+  // 关闭副作用函数的响应性，使得内部依赖变化也不会触发执行
+  stop() {
+    console.log("\u5173\u95ED\u54CD\u5E94\u6027");
+    if (this.active) {
+      cleanupEffect(this);
+      this.active = false;
+    }
+  }
 };
-function effect(fn) {
-  const _effect = new ReactieEffect(fn);
+function effect(fn, options = {}) {
+  const _effect = new ReactieEffect(fn, options.scheduler);
   _effect.run();
+  const runner = _effect.run.bind(_effect);
+  runner.effect = _effect;
+  return runner;
 }
 var targetMap = /* @__PURE__ */ new WeakMap();
 function cleanupEffect(effect2) {
@@ -39,7 +52,7 @@ function cleanupEffect(effect2) {
   for (const dep of deps) {
     dep.delete(effect2);
   }
-  activeEffect.deps.length = 0;
+  effect2.deps.length = 0;
 }
 function track(target, key) {
   if (!activeEffect) {
@@ -69,7 +82,11 @@ function trigger(target, key, value, oldValue) {
     const effects = [...dep];
     effects.forEach((effect2) => {
       if (activeEffect !== effect2) {
-        effect2.run();
+        if (!effect2.scheduler) {
+          effect2.run();
+        } else {
+          effect2.scheduler();
+        }
       }
     });
   }

@@ -5,15 +5,16 @@ class ReactieEffect {
 	public active = true
 
 	public parent = null
-	constructor(public fn) {}
+	constructor(public fn, private scheduler) {}
 	public deps = [] // 记录该响应性函数依赖的响应性属性的集合
+
+	// 执行副作用函数，并在副作用函数执行过程中收集依赖
 	run() {
 		// 如果不需要开启响应性。直接执行
 		if (!this.active) {
 			return this.fn()
 		}
 		// 需要开启响应性
-
 		try {
 			this.parent = activeEffect
 			activeEffect = this
@@ -26,15 +27,28 @@ class ReactieEffect {
 			this.parent = null
 		}
 	}
+
+	// 关闭副作用函数的响应性，使得内部依赖变化也不会触发执行
+	stop() {
+		console.log('关闭响应性')
+		// 将响应式标志关闭
+		if (this.active) {
+			cleanupEffect(this) // 先将当前effect所有依赖清除
+			this.active = false // 再将其变为失活态（非响应性）
+		}
+	}
 }
 
 /**
  * 依赖收集  将当前的 effect 变为全局的  便于在读取到对应属性时 取到这个全局的 effect
  * @param fn 响应式的函数
  */
-export function effect(fn) {
-	const _effect = new ReactieEffect(fn)
+export function effect(fn, options: any = {}) {
+	const _effect = new ReactieEffect(fn, options.scheduler)
 	_effect.run() // 默认执行一次
+	const runner = _effect.run.bind(_effect) // 保证 this 指向当前effect
+	runner.effect = _effect // 将当前 effect 暴露给 runner 供外界使用
+	return runner
 }
 
 // effect(() => {
@@ -61,12 +75,16 @@ export function effect(fn) {
 
 const targetMap = new WeakMap() // 一个映射表：键是不同对象，值是一个Map。用于记录 每个对象其所有 属性与函数的 映射
 
+/**
+ * 清理依赖
+ * @param effect
+ */
 function cleanupEffect(effect) {
 	const { deps } = effect
 	for (const dep of deps) {
 		dep.delete(effect)
 	}
-	activeEffect.deps.length = 0 // 清理对应的数组
+	effect.deps.length = 0 // 清理对应的数组
 }
 
 /**
@@ -76,6 +94,8 @@ function cleanupEffect(effect) {
  */
 export function track(target, key) {
 	// 如果访问属性的操作没有发生在 effect 中，直接返回，不会追中到依赖
+	// 或者 effect 是失活态，也不会收集依赖。
+	// 可以将是否有 activeEffect 视为一种是否收集依赖的标准
 	if (!activeEffect) {
 		return
 	}
@@ -116,7 +136,11 @@ export function trigger(target, key, value, oldValue) {
 		effects.forEach((effect) => {
 			if (activeEffect !== effect) {
 				// 为避免effect 中修改同一个effect当前依赖的属性造成递归死循环，进行判断：当前执行的 effect 与 遍历到的准备的执行的effect 不相等时，才调用执行操作
-				effect.run()
+				if (!effect.scheduler) {
+					effect.run()
+				} else {
+					effect.scheduler()
+				}
 				// 解决思路，每次执行的时候先清理，再重新收集依赖。
 			}
 		})
