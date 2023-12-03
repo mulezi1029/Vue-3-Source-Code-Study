@@ -1,0 +1,74 @@
+<!--
+ * @Author: cy 1205766513@qq.com
+ * @Date: 2023-12-01 16:35:36
+ * @LastEditors: cy 1205766513@qq.com
+ * @LastEditTime: 2023-12-01 17:23:14
+ * @FilePath: \vue3-core-study\packages\reactivity\dist\index.html
+ * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
+-->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+
+<body>
+  <div id="app"></div>
+  <script type="module">
+    //import { effect, reactive } from '/node_modules/@vue/reactivity/dist/reactivity.esm-browser.js'
+    import { reactive, effect } from './reactivity.esm.js'
+
+    const app = document.querySelector('#app')
+    const obj = {
+      flag: false,
+      name: 'cy',
+      age: 20,
+      hby: 'ad'
+    }
+
+    const state = reactive(obj)
+
+
+    // 触发更新死循环例子
+    // effect(() => {
+    //   state.age = Math.random()
+    //   app.innerHTML = state.age
+    // })
+    // setTimeout(() => {
+    //   debugger
+    //   state.age = 1
+    // }, 2000)
+
+
+    // effect 内的副作用函数  收集依赖  依赖变化后自动重新执行
+    // 清理无用依赖例子
+    effect(() => {
+      console.log('runner')
+      app.innerHTML = state.flag ? state.name : state.age
+    })
+    // 默认第一次 flag 与 age 会收集当前 effect
+
+
+    // 属性更新  响应性的重新执行依赖该属性的 effect
+    setTimeout(() => {
+      debugger
+      state.flag = !state.flag  // flag 修改触发重新执行 effect。重新执行会又收集依赖，从而将 name 收集到 effect，此时 effect 仅使用到 flag 与 name 但是age还
+      // 保留着收集了effect，因该让 age 不再收集effect 的 
+      setTimeout(() => {
+        console.log('修改age')
+        state.age = 1
+      }, 5000)  // 按理说不应该触发更新,因为修改 flag 后，age属性已经不被effect依赖了
+    }, 4000)
+
+    // 修改 flag 后， flag 还是会收集 effect； 但是 age 不应该收集当前的 effect； 而是 name 收集当前 effect
+
+    // 总结问题：有些时候 effect 初始时收集了对应的所有依赖后，后续某个依赖的变更后，会影响该effect所使用到的依赖（即可能会产生无用依赖），那么会导致后面对此无用依赖的修改也会重新出发改efect，这是不希望出现的
+    // 那么解决问题：就是每次触发effct时，先清理一次所有的依赖，再重新收集依赖
+  </script>
+</body>
+
+</html>
