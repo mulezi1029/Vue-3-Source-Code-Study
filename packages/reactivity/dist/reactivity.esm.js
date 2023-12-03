@@ -99,7 +99,11 @@ var baseHandlers = {
       return true;
     }
     track(target, key);
-    return Reflect.get(target, key, receiver);
+    let res = Reflect.get(target, key, receiver);
+    if (isObject(res)) {
+      res = reactive(res);
+    }
+    return res;
   },
   set(target, key, value, receiver) {
     let oldValue = target[key];

@@ -1,5 +1,6 @@
+import { isObject } from '@vue/shared'
 import { track, trigger } from './effect'
-import { ReactiveFlags } from './reactive'
+import { reactive, ReactiveFlags } from './reactive'
 
 export const baseHandlers = {
 	get(target, key, receiver) {
@@ -7,8 +8,14 @@ export const baseHandlers = {
 			return true
 		}
 		// console.log(activeEffect, key) // 能够知道 属性 与 副作用函数的对应关系：哪个函数中读取到了哪个属性
+
 		track(target, key)
-		return Reflect.get(target, key, receiver)
+		let res = Reflect.get(target, key, receiver)
+		// 如果访问的属性其值还是对象，那么就进行深度代理
+		if (isObject(res)) {
+			res = reactive(res)
+		}
+		return res
 	},
 
 	set(target, key, value, receiver) {
