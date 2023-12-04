@@ -9,10 +9,10 @@
 </head>
 
 <body>
-
+  <div id="app"></div>
   <script type="module">
     // import { computed, reactive } from '/node_modules/@vue/reactivity/dist/reactivity.esm-browser.js'
-    import { reactive, computed } from './reactivity.esm.js'
+    import { reactive, computed, effect } from './reactivity.esm.js'
 
     const obj = {
       flag: false,
@@ -23,30 +23,33 @@
 
     const state = reactive(obj)
 
-
-
     const aliasName = computed(() => {
       console.log('computed 默认不执行')
       return '**' + state.name
     })
+    /* 
+        // 进行取值时，会触发调用传入的 getter
+        console.log(aliasName.value)
+        console.log(aliasName.value)  // 依赖没变化时取值会取缓存，不会重新执行
+    
+        // 依赖变化后，会将_dirty标志改为 true，从而使得后面再次进行取值，会重新执行getter
+        state.name = 'ly'   // _dirty 变为了 true
+        aliasName.value  // 取值时，由于 _dirty 是 true 就会重新执行 getter 取得值并缓存新值
+    
+        // 要达到这样的效果，计算属性内部需要有一个变量（_dirty），控制是否需要重新执行getter函数
+        // 内部的 dirty 变量默认是true，表明最开始用户取值是要执行getter函数，拿到返回的值并且缓存起来，同时将dirty变为false
+        // 再次取值，dirty为false，就去取缓存的结果
+        // 直到依赖发生变化后，更新dirty为true，然后取值的时候就会执行getter，拿到新值
+    */
 
-    debugger
-    // 进行取值时，会触发调用传入的 getter
-    console.log(aliasName.value)
-    console.log(aliasName.value)  // 依赖没变化时取值会取缓存，不会重新执行
+    // 有个问题：如果 state.name 变化，那么计算属性的值在下次取值时会变化，但是按理说 state.name 变化，计算属性的值会变化，那么就应该触发页面的更新，但是上面的实现是做不到的，因为该 effect 没有收集该计算属性为依赖 
+    effect(() => {
+      app.innerHTML = aliasName.value
+    })
 
-    // 依赖变化后，会将_dirty标志改为 true，从而使得后面再次进行取值，会重新执行getter
-    state.name = 'ly'   // _dirty 变为了 true
-    aliasName.value  // 取值时，由于 _dirty 是 true 就会重新执行 getter 取得值并缓存新值
-
-    // 要达到这样的效果，计算属性内部需要有一个变量（_dirty），控制是否需要重新执行getter函数
-    // 内部的 dirty 变量默认是true，表明最开始用户取值是要执行getter函数，拿到返回的值并且缓存起来，同时将dirty变为false
-    // 再次取值，dirty为false，就去取缓存的结果
-    // 直到依赖发生变化后，更新dirty为true，然后取值的时候就会执行getter，拿到新值
-
-
-    console.log(aliasName)
-
+    setTimeout(() => {
+      state.name = 'ccy'
+    }, 1000)
   </script>
 
 </body>

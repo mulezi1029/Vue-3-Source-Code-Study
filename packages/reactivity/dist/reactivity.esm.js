@@ -69,6 +69,9 @@ function track(target, key) {
   if (!dep) {
     depsMap.set(key, dep = /* @__PURE__ */ new Set());
   }
+  trackEffects(dep);
+}
+function trackEffects(dep) {
   let shouldTrack = !dep.has(activeEffect);
   if (shouldTrack) {
     dep.add(activeEffect);
@@ -82,17 +85,20 @@ function trigger(target, key, value, oldValue) {
   }
   const dep = depsMap.get(key);
   if (dep) {
-    const effects = [...dep];
-    effects.forEach((effect2) => {
-      if (activeEffect !== effect2) {
-        if (!effect2.scheduler) {
-          effect2.run();
-        } else {
-          effect2.scheduler();
-        }
-      }
-    });
+    triggerEffects(dep);
   }
+}
+function triggerEffects(dep) {
+  const effects = [...dep];
+  effects.forEach((effect2) => {
+    if (activeEffect !== effect2) {
+      if (!effect2.scheduler) {
+        effect2.run();
+      } else {
+        effect2.scheduler();
+      }
+    }
+  });
 }
 
 // packages/reactivity/src/baseHandlers.ts
@@ -148,16 +154,22 @@ var ComputedRefImp = class {
   constructor(getter, setter) {
     this.setter = setter;
     this.dep = null;
+    // 计算属性收集的effects依赖集合
     this.effect = null;
+    // getter 的封装
     this.__v_isRef = true;
     this._dirty = true;
     // 控制是否需要重新执行：第一次取后，只要依赖没变后面都直接取缓存，不需要重新执行；依赖变后才要重新执行。 初始为true 表示需要执行
     this._value = void 0;
     this.effect = new ReactieEffect(getter, () => {
       this._dirty = true;
+      triggerEffects(this.dep);
     });
   }
   get value() {
+    if (activeEffect) {
+      trackEffects(this.dep || (this.dep = /* @__PURE__ */ new Set()));
+    }
     if (this._dirty) {
       this._value = this.effect.run();
       this._dirty = false;
@@ -189,6 +201,8 @@ export {
   effect,
   reactive,
   track,
-  trigger
+  trackEffects,
+  trigger,
+  triggerEffects
 };
 //# sourceMappingURL=reactivity.esm.js.map
