@@ -1,6 +1,6 @@
 export let activeEffect
 
-class ReactieEffect {
+export class ReactieEffect {
 	// 控制这个函数是否需要响应性的开关标志
 	public active = true
 

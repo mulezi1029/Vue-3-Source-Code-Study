@@ -2,6 +2,9 @@
 function isObject(obj) {
   return obj !== null && typeof obj === "object";
 }
+function isFunction(value) {
+  return typeof value === "function";
+}
 
 // packages/reactivity/src/effect.ts
 var activeEffect;
@@ -136,9 +139,53 @@ function reactive(target) {
   proxyMap.set(target, proxy);
   return proxy;
 }
+
+// packages/reactivity/src/computed.ts
+var noop = () => {
+};
+var ComputedRefImp = class {
+  // 缓存值
+  constructor(getter, setter) {
+    this.setter = setter;
+    this.dep = null;
+    this.effect = null;
+    this.__v_isRef = true;
+    this._dirty = true;
+    // 控制是否需要重新执行：第一次取后，只要依赖没变后面都直接取缓存，不需要重新执行；依赖变后才要重新执行。 初始为true 表示需要执行
+    this._value = void 0;
+    this.effect = new ReactieEffect(getter, () => {
+      this._dirty = true;
+    });
+  }
+  get value() {
+    if (this._dirty) {
+      this._value = this.effect.run();
+      this._dirty = false;
+    }
+    return this._value;
+  }
+  set value(newValue) {
+    this.setter(newValue);
+  }
+};
+function computed(getterOrOptions) {
+  const onlyGetter = isFunction(getterOrOptions);
+  let getter;
+  let setter;
+  if (onlyGetter) {
+    getter = getterOrOptions;
+    setter = noop;
+  } else {
+    getter = getterOrOptions.get;
+    setter = getterOrOptions.set || noop;
+  }
+  return new ComputedRefImp(getter, setter);
+}
 export {
+  ReactieEffect,
   ReactiveFlags,
   activeEffect,
+  computed,
   effect,
   reactive,
   track,
