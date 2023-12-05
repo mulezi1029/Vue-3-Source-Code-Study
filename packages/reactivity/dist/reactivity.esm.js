@@ -211,7 +211,7 @@ function traverse(source, visited = /* @__PURE__ */ new Set()) {
   }
   return source;
 }
-function watch(source, cb, options = {}) {
+function doWatch(source, cb, opts) {
   let oldValue;
   let getter;
   if (isReactive(source)) {
@@ -220,15 +220,25 @@ function watch(source, cb, options = {}) {
     getter = source;
   }
   const job = () => {
-    const newVal = effect2.run();
-    cb(newVal, oldValue);
-    oldValue = newVal;
+    if (cb) {
+      const newVal = effect2.run();
+      cb(newVal, oldValue);
+      oldValue = newVal;
+    } else {
+      effect2.run();
+    }
   };
   const effect2 = new ReactieEffect(getter, job);
-  if (options.immediate) {
+  if (opts.immediate) {
     job();
   }
   oldValue = effect2.run();
+}
+function watch(source, cb, options = {}) {
+  doWatch(source, cb, options);
+}
+function watchEffect(effect2, options = {}) {
+  doWatch(effect2, null, options);
 }
 export {
   ReactieEffect,
@@ -242,6 +252,7 @@ export {
   trackEffects,
   trigger,
   triggerEffects,
-  watch
+  watch,
+  watchEffect
 };
 //# sourceMappingURL=reactivity.esm.js.map

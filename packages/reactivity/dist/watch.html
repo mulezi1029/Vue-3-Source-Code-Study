@@ -12,7 +12,7 @@
   <div id="app"></div>
   <script type="module">
     // import { computed, reactive } from '/node_modules/@vue/reactivity/dist/reactivity.esm-browser.js'
-    import { reactive, computed, effect, watch } from './reactivity.esm.js'
+    import { reactive, computed, effect, watch, watchEffect } from './reactivity.esm.js'
 
     const obj = {
       flag: false,
@@ -26,9 +26,13 @@
     watch(() => state.name, (newVal, oldVal) => {
       console.log(newVal, oldVal)
     }, { immediate: true })
-
+    debugger
+    watchEffect(() => {
+      console.log(state.name)
+    })
     state.name = 'ly'
     state.name = 'ccy'
+
 
   </script>
 
