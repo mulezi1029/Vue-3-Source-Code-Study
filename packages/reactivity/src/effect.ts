@@ -155,8 +155,10 @@ export function triggerEffects(dep) {
 	effects.forEach((effect) => {
 		if (activeEffect !== effect) {
 			if (!effect.scheduler) {
+				// 没有传入自定义调度函数，更新就重新执行副作用函数
 				effect.run()
 			} else {
+				// 否则就执行调度函数 scheduler
 				effect.scheduler()
 			}
 		}
