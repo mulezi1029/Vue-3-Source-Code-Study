@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+
+<body>
+  <div id="app"></div>
+  <script type="module">
+    // import { computed, reactive } from '/node_modules/@vue/reactivity/dist/reactivity.esm-browser.js'
+    import { reactive, computed, effect, watch } from './reactivity.esm.js'
+
+    const obj = {
+      flag: false,
+      name: 'cy',
+      age: 20,
+      hby: 'ad'
+    }
+    const state = reactive(obj)
+
+    // watch 就是一个 effect，状态会收集 watch effect，属性变化后触发 scheduler
+    watch(() => state.name, (newVal, oldVal) => {
+      console.log(newVal, oldVal)
+    }, { immediate: true })
+
+    state.name = 'ly'
+    state.name = 'ccy'
+
+  </script>
+
+</body>
+
+</html>

@@ -5,10 +5,12 @@ export const enum ReactiveFlags {
 	IS_REACTIVE = '__v_isReactive',
 }
 
+export function isReactive(value: any): boolean {
+	return !!(value && value[ReactiveFlags.IS_REACTIVE])
+}
+
 // 缓存一个对象的proxy代理
 const proxyMap = new WeakMap()
-
-
 
 export function reactive(target) {
 	// 不是对象，直接返回
@@ -35,5 +37,3 @@ export function reactive(target) {
 
 	return proxy
 }
-
-
