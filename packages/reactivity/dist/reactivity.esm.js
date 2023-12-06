@@ -84,21 +84,21 @@ function trigger(target, key, value, oldValue) {
     return;
   }
   const dep = depsMap.get(key);
-  if (dep) {
-    triggerEffects(dep);
-  }
+  triggerEffects(dep);
 }
 function triggerEffects(dep) {
-  const effects = [...dep];
-  effects.forEach((effect2) => {
-    if (activeEffect !== effect2) {
-      if (!effect2.scheduler) {
-        effect2.run();
-      } else {
-        effect2.scheduler();
+  if (dep) {
+    const effects = [...dep];
+    effects.forEach((effect2) => {
+      if (activeEffect !== effect2) {
+        if (!effect2.scheduler) {
+          effect2.run();
+        } else {
+          effect2.scheduler();
+        }
       }
-    }
-  });
+    });
+  }
 }
 
 // packages/reactivity/src/baseHandlers.ts
@@ -240,6 +240,32 @@ function watch(source, cb, options = {}) {
 function watchEffect(effect2, options = {}) {
   doWatch(effect2, null, options);
 }
+
+// packages/reactivity/src/ref.ts
+function toReactive(value) {
+  return isObject(value) ? reactive(value) : value;
+}
+var RefImpl = class {
+  constructor(rawValue) {
+    this.rawValue = rawValue;
+    this.__v_isRef = true;
+    this._value = toReactive(rawValue);
+  }
+  get value() {
+    trackEffects(this.dep || (this.dep = /* @__PURE__ */ new Set()));
+    return this._value;
+  }
+  set value(newValue) {
+    if (newValue !== this.rawValue) {
+      this._value = toReactive(newValue);
+      this.rawValue = newValue;
+      triggerEffects(this.dep);
+    }
+  }
+};
+function ref(value) {
+  return new RefImpl(value);
+}
 export {
   ReactieEffect,
   ReactiveFlags,
@@ -248,6 +274,7 @@ export {
   effect,
   isReactive,
   reactive,
+  ref,
   track,
   trackEffects,
   trigger,

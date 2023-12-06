@@ -132,37 +132,24 @@ export function trigger(target, key, value, oldValue) {
 		return
 	}
 	const dep = depsMap.get(key) // 拿到 属性 对应的 effect 集合，循环执行
-	// 这里逻辑还有问题：问题是 set 与数组都有的使用上的陷阱
-	if (dep) {
-		triggerEffects(dep)
-		// const effects = [...dep]
-		// effects.forEach((effect) => {
-		// 	if (activeEffect !== effect) {
-		// 		// 为避免effect 中修改同一个effect当前依赖的属性造成递归死循环，进行判断：当前执行的 effect 与 遍历到的准备的执行的effect 不相等时，才调用执行操作
-		// 		if (!effect.scheduler) {
-		// 			effect.run()
-		// 		} else {
-		// 			effect.scheduler()
-		// 		}
-		// 		// 解决思路，每次执行的时候先清理，再重新收集依赖。
-		// 	}
-		// })
-	}
+	triggerEffects(dep)
 }
 
 export function triggerEffects(dep) {
-	const effects = [...dep]
-	effects.forEach((effect) => {
-		if (activeEffect !== effect) {
-			if (!effect.scheduler) {
-				// 没有传入自定义调度函数，更新就重新执行副作用函数
-				effect.run()
-			} else {
-				// 否则就执行调度函数 scheduler
-				effect.scheduler()
+	if (dep) {
+		const effects = [...dep]
+		effects.forEach((effect) => {
+			if (activeEffect !== effect) {
+				if (!effect.scheduler) {
+					// 没有传入自定义调度函数，更新就重新执行副作用函数
+					effect.run()
+				} else {
+					// 否则就执行调度函数 scheduler
+					effect.scheduler()
+				}
 			}
-		}
-	})
+		})
+	}
 }
 
 // // 类比于

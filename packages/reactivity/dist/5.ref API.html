@@ -9,9 +9,30 @@
 </head>
 
 <body>
+  <div id="app"></div>
   <script type="module">
     // import { ref } from '/node_modules/@vue/reactivity/dist/reactivity.esm-browser.js'
-    import { ref } from './reactivity.esm.js'
+    import { ref, reactive, watchEffect } from './reactivity.esm.js'
+    const obj = {
+      name: 'cy',
+      age: 20,
+      hby: 'ad'
+    }
+
+    const state = reactive(obj)
+
+    const flag = ref(true)
+
+    watchEffect(() => {
+      app.innerHTML = flag.value ? state.name : state.age
+    })
+
+    setTimeout(() => {
+      flag.value = false
+      setTimeout(() => {
+        state.name = 'ccc'
+      })
+    }, 2000)
 
   </script>
 </body>
