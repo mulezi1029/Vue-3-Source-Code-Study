@@ -1,5 +1,5 @@
 import { isObject } from '@vue/shared'
-import { trackEffects, triggerEffects } from './effect'
+import { activeEffect, trackEffects, triggerEffects } from './effect'
 import { reactive } from './reactive'
 
 function toReactive(value) {
@@ -14,8 +14,10 @@ class RefImpl {
 		this._value = toReactive(rawValue) // 对传进来的原始值进行代理
 	}
 	get value() {
-		// 依赖收集
-		trackEffects(this.dep || (this.dep = new Set()))
+		if (activeEffect) {
+			// 依赖收集
+			trackEffects(this.dep || (this.dep = new Set()))
+		}
 		return this._value
 	}
 	set value(newValue) {

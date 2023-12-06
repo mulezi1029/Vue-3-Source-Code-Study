@@ -252,7 +252,9 @@ var RefImpl = class {
     this._value = toReactive(rawValue);
   }
   get value() {
-    trackEffects(this.dep || (this.dep = /* @__PURE__ */ new Set()));
+    if (activeEffect) {
+      trackEffects(this.dep || (this.dep = /* @__PURE__ */ new Set()));
+    }
     return this._value;
   }
   set value(newValue) {
