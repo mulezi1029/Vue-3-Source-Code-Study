@@ -268,6 +268,53 @@ var RefImpl = class {
 function ref(value) {
   return new RefImpl(value);
 }
+var ObjectRefImpl = class {
+  constructor(_target, _key) {
+    this._target = _target;
+    this._key = _key;
+    this.__v_isRef = true;
+  }
+  get value() {
+    if (activeEffect) {
+      trackEffects(this.dep || (this.dep = /* @__PURE__ */ new Set()));
+    }
+    this._value = this._target[this._key];
+    return this._value;
+  }
+  set value(newValue) {
+    if (newValue !== this._value) {
+      this._target[this._key] = newValue;
+      this._value = this._target[this._key];
+      triggerEffects(this.dep);
+    }
+  }
+};
+function toRef(target, key) {
+  return new ObjectRefImpl(target, key);
+}
+function toRefs(target) {
+  const res = {};
+  for (let key in target) {
+    res[key] = toRef(target, key);
+  }
+  return res;
+}
+function proxyRefs(objectWithRefs) {
+  return new Proxy(objectWithRefs, {
+    get(target, key, receiver) {
+      const v = Reflect.get(target, key, receiver);
+      return v.__v_isRef ? v.value : v;
+    },
+    set(target, key, value, receiver) {
+      const oldValue = target[key];
+      if (!oldValue.__v_isRef) {
+        return Reflect.set(target, key, value, receiver);
+      }
+      oldValue.value = value;
+      return true;
+    }
+  });
+}
 export {
   ReactieEffect,
   ReactiveFlags,
@@ -275,8 +322,11 @@ export {
   computed,
   effect,
   isReactive,
+  proxyRefs,
   reactive,
   ref,
+  toRef,
+  toRefs,
   track,
   trackEffects,
   trigger,

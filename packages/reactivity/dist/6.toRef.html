@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+
+<body>
+  <div id="app"></div>
+  <div id="cpp"></div>
+  <script type="module">
+    // import { toRefs } from '/node_modules/@vue/reactivity/dist/reactivity.esm-browser.js'
+    import { reactive, watchEffect, ref, toRef, toRefs, proxyRefs } from './reactivity.esm.js'
+    const obj = {
+      name: 'cy',
+      age: 20,
+      hby: 'ad'
+    }
+
+    const state = reactive(obj)
+
+    const flag = ref(true)
+
+    // const name = toRef(state, 'name')
+    // const age = toRef(state, 'age')
+
+    const stateRefs = toRefs(state)
+    const { name, age } = stateRefs
+    let { name: name1, age: age1 } = proxyRefs(stateRefs)
+
+    watchEffect(() => {
+      app.innerHTML = flag.value ? name.value : age.value
+      cpp.innerHTML = flag.value ? name1 : age1
+    })   // 此副作用函数一开始其实会收集到三个依赖：flag、name、以及收集name过程中收集 state.name
+
+    setTimeout(() => {
+      flag.value = !flag.value
+      name.value = 'cccccccccc'
+    }, 2000)
+
+
+  </script>
+</body>
+
+</html>
