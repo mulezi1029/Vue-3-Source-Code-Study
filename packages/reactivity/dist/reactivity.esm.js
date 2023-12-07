@@ -6,6 +6,44 @@ function isFunction(value) {
   return typeof value === "function";
 }
 
+// packages/reactivity/src/effectScope.ts
+var activeEffectScope;
+var EffectScope = class {
+  constructor() {
+    this.active = true;
+    this.effects = /* @__PURE__ */ new Set();
+    this.parent = null;
+  }
+  run(fn) {
+    if (this.active) {
+      try {
+        this.parent = activeEffectScope;
+        activeEffectScope = this;
+        return fn();
+      } finally {
+        activeEffectScope = this.parent;
+        this.parent = null;
+      }
+    }
+  }
+  stop() {
+    if (this.active) {
+      for (const effect2 of this.effects) {
+        effect2.stop();
+      }
+      this.active = false;
+    }
+  }
+};
+function recordEffectScope(effct) {
+  if (activeEffectScope && activeEffectScope.active) {
+    activeEffectScope.effects.add(effct);
+  }
+}
+function effectScope() {
+  return new EffectScope();
+}
+
 // packages/reactivity/src/effect.ts
 var activeEffect;
 var ReactieEffect = class {
@@ -16,6 +54,7 @@ var ReactieEffect = class {
     this.active = true;
     this.parent = null;
     this.deps = [];
+    recordEffectScope(this);
   }
   // 记录该响应性函数依赖的响应性属性的集合
   // 执行副作用函数，并在副作用函数执行过程中收集依赖
@@ -319,11 +358,14 @@ export {
   ReactieEffect,
   ReactiveFlags,
   activeEffect,
+  activeEffectScope,
   computed,
   effect,
+  effectScope,
   isReactive,
   proxyRefs,
   reactive,
+  recordEffectScope,
   ref,
   toRef,
   toRefs,

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+
+<body>
+  <script type="module">
+    import { effectScope, reactive, effect } from './reactivity.esm.js'
+
+
+    const scope = effectScope()
+    console.log(scope)
+    // debugger
+    scope.run(() => {
+      const state = reactive({ age: 30 })
+      let runner = effect(() => {
+        console.log(state.age)
+      })
+      setTimeout(() => { state.age++ }, 2000)
+    })
+
+
+    scope.run(() => {
+      const state = reactive({ age: 30 })
+      let runner = effect(() => {
+        console.log(state.age)
+      })
+      setTimeout(() => { state.age++ }, 2000)
+    })
+    // debugger
+    scope.stop()
+  </script>
+</body>
+
+</html>
