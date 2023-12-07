@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+
+<body>
+  <div id="app"></div>
+
+  <script type="module">
+    import { createRenderer, h } from '/node_modules/@vue/runtime-dom/dist/runtime-dom.esm-browser.js'
+
+    // runtime-dom：提供浏览器的API操作方法
+    // runtime-core：只是虚拟DOM，会调用上层runtime-dom提供的方法
+    // const { render } = createRenderer({
+    //   createElement(tagName) {
+    //     return document.createElement(tagName)
+    //   },
+    //   setElementText(el, text) {
+    //     el.innerHTML = text
+    //   }
+    // })
+    // render：将虚拟DOM渲染为浏览器真实DOM
+    // h 函数：用于创建虚拟 DOM --runtime-core
+    // console.log(h('div', {}, 'render'))
+    // debugger
+    // render(h('div', {}, 'render'), app)
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,17 @@
+{
+	"name": "@vue/runtime-dom",
+	"main": "index.ts",
+	"module": "dist/runtime-dom.esm-bundler.js",
+	"unpkg": "dist/runtime-dom.golbal.js",
+	"buildOptions": {
+		"name": "VueRuntimDom",
+		"formats": [
+			"esm-bundler",
+			"cjs",
+			"global"
+		]
+	},
+	"dependencies": {
+		"@vue/shared": "workspace:^"
+	}
+}
