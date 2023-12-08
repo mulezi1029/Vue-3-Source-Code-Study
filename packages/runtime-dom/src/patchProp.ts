@@ -1,5 +1,7 @@
-// 设置属性的操作
+// 设置属性操作API
+import { patchAttrs } from './module/attr'
 import { patchClass } from './module/class'
+import { patchEvents } from './module/events'
 import { patchStyle } from './module/style'
 
 /**
@@ -18,7 +20,9 @@ export const patchProp = (el, key, preVal, nextVal) => {
 		patchStyle(el, preVal, nextVal)
 	} else if (/^on[^a-z]/.test(key)) {
 		// event
+		patchEvents(el, key, preVal, nextVal)
 	} else {
 		// attr
+		patchAttrs(el, key, nextVal)
 	}
 }
