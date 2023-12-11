@@ -5,3 +5,7 @@ export function isObject(obj: any): boolean {
 export function isFunction(value: any): boolean {
 	return typeof value === 'function'
 }
+
+export function isString(value: any): boolean {
+	return typeof value === 'string'
+}

@@ -12,8 +12,21 @@
   <div id="app"></div>
 
   <script type="module">
-    import { createRenderer, h } from '/node_modules/@vue/runtime-dom/dist/runtime-dom.esm-browser.js'
-    import './runtime-dom.esm.js'
+    // import { createRenderer, h, render } from '/node_modules/@vue/runtime-dom/dist/runtime-dom.esm-browser.js'
+    import { h } from './runtime-dom.esm.js'
+    debugger
+    // 一个参数
+    console.log(h('div'))
+    // 两个参数
+    console.log(h('div', { color: 'red' }))
+    console.log(h('div', h('span')))
+    console.log(h('div', ['hello']))
+    console.log(h('div', 'world'))
+    // 三个参数
+    console.log(h('div', { color: 'red' }, 'he'))
+    console.log(h('div', { color: 'red' }, ['a']))
+    console.log(h('div', { color: 'red' }, h('span')))
+
     // runtime-dom：提供浏览器的API操作方法
     // runtime-core：只是虚拟DOM，会调用上层runtime-dom提供的方法
     // const { render } = createRenderer({

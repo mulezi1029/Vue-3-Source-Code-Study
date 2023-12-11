@@ -1,0 +1,16 @@
+{
+	"name": "@vue/runtime-core",
+	"main": "index.ts",
+	"module": "dist/runtime-core.esm-bundler.js",
+	"buildOptions": {
+		"name": "VueRuntimcore",
+		"formats": [
+			"esm-bundler",
+			"cjs",
+			"global"
+		]
+	},
+	"dependencies": {
+		"@vue/shared": "workspace:^"
+	}
+}
