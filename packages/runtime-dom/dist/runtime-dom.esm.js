@@ -1,9 +1,9 @@
 // packages/runtime-dom/src/nodeOps.ts
-var insert = (childEle, parent, anchor) => {
-  parent.insertBefore(childEle, anchor || null);
+var insert = (child, parent, anchor) => {
+  parent.insertBefore(child, anchor || null);
 };
 var remove = (child) => {
-  const parent = child.pareNode;
+  const parent = child.parentNode;
   if (parent) {
     parent.removeChild(child);
   }

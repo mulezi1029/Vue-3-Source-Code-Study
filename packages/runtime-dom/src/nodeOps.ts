@@ -1,20 +1,20 @@
 // DOM 节点操作的 API
 /**
  * 将childEle节点插入到parent中的anchor描点之前
- * @param childEle
- * @param parent
- * @param anchor
+ * @param {Node} child
+ * @param {Element} parent
+ * @param {Node|undefined|null} anchor
  */
-const insert = (childEle, parent, anchor) => {
-	parent.insertBefore(childEle, anchor || null) // anchor 为 null 时相当于 parent.appendChild(childEle)
+const insert = (child: Node, parent: Element, anchor: Node | undefined | null) => {
+	parent.insertBefore(child, anchor || null) // anchor 为 null 时相当于 parent.appendChild(child)
 }
 
 /**
  * 移除child节点
  * @param child
  */
-const remove = (child) => {
-	const parent = child.pareNode
+const remove = (child: Node) => {
+	const parent = child.parentNode
 	if (parent) {
 		parent.removeChild(child)
 	}
@@ -76,10 +76,10 @@ const setText = (el, text) => {
  * @param el
  * @param text
  */
+
 const setElementText = (el, text) => {
 	el.textContent = text
 }
-
 export const nodeOps = {
 	insert,
 	remove,

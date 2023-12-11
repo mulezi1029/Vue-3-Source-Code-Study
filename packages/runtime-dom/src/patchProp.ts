@@ -6,12 +6,12 @@ import { patchStyle } from './module/style'
 
 /**
  *
- * @param el 节点元素
+ * @param {Element} el 节点元素
  * @param key 属性名
  * @param preVal 之前的值
  * @param nextVal 新值
  */
-export const patchProp = (el, key, preVal, nextVal) => {
+export const patchProp = (el: Element, key, preVal, nextVal) => {
 	if (key === 'class') {
 		// class
 		patchClass(el, nextVal)
