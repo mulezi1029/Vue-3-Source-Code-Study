@@ -30,10 +30,9 @@ export function h(type: any, propsOrChildren?: any, children?: any) {
 	}
 	// 三个参数:肯定有 type 和 props，第三个参数的children 可能是 vnode，text，array，只要不是array，就变为array
 	else if (length === 3) {
-		if (Array.isArray(children)) {
-			return createVNode(type, propsOrChildren, children)
-		} else {
+		if (isVNode(children)) {
 			return createVNode(type, propsOrChildren, [children])
 		}
+		return createVNode(type, propsOrChildren, children) // 数组或者文本
 	}
 }
