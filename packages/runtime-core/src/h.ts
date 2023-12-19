@@ -1,5 +1,5 @@
 import { isObject } from '@vue/shared'
-import { createVNode, isVNode } from './vnode'
+import { createVNode, isVNode, Text } from './vnode'
 
 // h 根据传入的参数实现重载效果
 export function h(type: any, propsOrChildren?: any, children?: any) {

@@ -60,7 +60,7 @@ const createElement = (tagName) => {
  * @param text
  */
 const createText = (text) => {
-	document.createTextNode(text)
+	return document.createTextNode(text)
 }
 
 /**

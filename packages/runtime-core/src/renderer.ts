@@ -1,7 +1,7 @@
 // 创建与平台无关的渲染器
 
 import { shapeFlags } from 'packages/shared/src/shapeFlags'
-import { isSameVNodeType } from './vnode'
+import { isSameVNodeType, Text } from './vnode'
 // 渲染器用于将生成的虚拟节点转为平台的真实DOM
 export function createRenderer(options) {
 	const {
@@ -299,7 +299,21 @@ export function createRenderer(options) {
 			patchElement(n1, n2)
 		}
 	}
-
+	const processText = (n1, n2, container) => {
+		if (n1 === null) {
+			// 该类型的 vnode 是初次渲染
+			// 创建文本元素
+			console.dir((n2.el = hostCreateText(n2.children)))
+			const el = (n2.el = hostCreateText(n2.children))
+			hostInsert(el, container)
+		} else {
+			// 复用节点
+			n2.el = n2.el
+			if (n1.children !== n2.children) {
+				hostSetText(container, n2.children) // 文本更新
+			}
+		}
+	}
 	/**
 	 * patch 函数：根据传入的新旧 vnode，确定是要进行初次渲染新的vnode，还是要diff新旧
 	 * @param n1 旧 vnode
@@ -308,6 +322,7 @@ export function createRenderer(options) {
 	 * @param anchor
 	 * @returns
 	 */
+	// 每增加一种类型：如 文本、元素... 考虑三方面：初次渲染，复用更新，卸载
 	const patch = (n1, n2, container, anchor = null) => {
 		if (n1 === n2) return
 
@@ -317,7 +332,20 @@ export function createRenderer(options) {
 			n1 = null
 		}
 
-		processElement(n1, n2, container, anchor)
+		const { type, shapeFlag } = n2
+		switch (type) {
+			// 处理文本
+			case Text:
+				processText(n1, n2, container)
+				break
+
+			default:
+				// 处理元素
+				if (shapeFlag & shapeFlags.ELEMENT) {
+					processElement(n1, n2, container, anchor)
+				}
+				break
+		}
 	}
 
 	// 页面中删除 vnode 对应的节点
@@ -329,6 +357,7 @@ export function createRenderer(options) {
 	const render = (vnode, container) => {
 		// 卸载：删除节点
 		if (vnode === null) {
+			debugger
 			// 渲染过才能够卸载
 			if (container._vnode) {
 				unmount(container._vnode)

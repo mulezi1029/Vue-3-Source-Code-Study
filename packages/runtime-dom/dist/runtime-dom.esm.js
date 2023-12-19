@@ -7,6 +7,7 @@ function isString(value) {
 }
 
 // packages/runtime-core/src/vnode.ts
+var Text = Symbol("text");
 function isVNode(vnode) {
   return vnode.__v_isVnode === true;
 }
@@ -240,6 +241,18 @@ function createRenderer(options) {
       patchElement(n1, n2);
     }
   };
+  const processText = (n1, n2, container) => {
+    if (n1 === null) {
+      console.dir(n2.el = hostCreateText(n2.children));
+      const el = n2.el = hostCreateText(n2.children);
+      hostInsert(el, container);
+    } else {
+      n2.el = n2.el;
+      if (n1.children !== n2.children) {
+        hostSetText(container, n2.children);
+      }
+    }
+  };
   const patch = (n1, n2, container, anchor = null) => {
     if (n1 === n2)
       return;
@@ -247,13 +260,24 @@ function createRenderer(options) {
       unmount(n1);
       n1 = null;
     }
-    processElement(n1, n2, container, anchor);
+    const { type, shapeFlag } = n2;
+    switch (type) {
+      case Text:
+        processText(n1, n2, container);
+        break;
+      default:
+        if (shapeFlag & 1 /* ELEMENT */) {
+          processElement(n1, n2, container, anchor);
+        }
+        break;
+    }
   };
   const unmount = (vnode) => {
     hostRemove(vnode.el);
   };
   const render2 = (vnode, container) => {
     if (vnode === null) {
+      debugger;
       if (container._vnode) {
         unmount(container._vnode);
       }
@@ -290,7 +314,7 @@ var createElement = (tagName) => {
   return document.createElement(tagName);
 };
 var createText = (text) => {
-  document.createTextNode(text);
+  return document.createTextNode(text);
 };
 var setText = (el, text) => {
   el.nodeValue = text;
@@ -408,6 +432,7 @@ var render = (vnode, container) => {
   return createRenderer(renderOptions).render(vnode, container);
 };
 export {
+  Text,
   createRenderer,
   createVNode,
   h,

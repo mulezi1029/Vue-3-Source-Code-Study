@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+
+<body>
+  <div id="app"></div>
+  <script type="module">
+    import { h, render, Text } from './runtime-dom.esm.js'
+    render(h('div', [
+      h('li', { key: 'a' }, 'a'),
+      h('li', { key: 'b' }, 'b'),
+      h('li', { key: 'c' }, 'c'),
+      h('li', { key: 'd' }, 'd'),
+      h('li', { key: 'e' }, 'e'),
+      h('li', { key: 'f' }, 'f'),
+      h('li', { key: 'g' }, 'g'),
+    ]), app)
+    setTimeout(() => {
+      render(h(Text, 'aaa'), app)
+      setTimeout(() => {
+        render(null, app)
+      }, 1000);
+    }, 2000);
+  </script>
+
+</body>
+
+</html>
