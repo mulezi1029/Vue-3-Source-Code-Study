@@ -5,6 +5,10 @@ export function isVNode(vnode) {
 	return vnode.__v_isVnode === true
 }
 
+export function isSameVNodeType(n1, n2) {
+	return n1.type === n2.type && n1.key === n2.key
+}
+
 /**
  * 最底层用于创建最基本的虚拟节点的API
  * @param type

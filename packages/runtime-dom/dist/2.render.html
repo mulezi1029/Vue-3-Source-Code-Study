@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+
+<body>
+  <div id="app"></div>
+  <script type="module">
+    import { h, render } from './runtime-dom.esm.js'
+
+
+    // children 情况
+    // 新：文本
+    // // 1、新文本，旧数组
+    // render(h('div', h('span', 'hello')), app)
+    // setTimeout(() => {
+    //   render(h('div', 'world'), app)
+    // }, 2000)
+
+    // // 2、新文本，旧文本
+    // render(h('div', '旧文本'), app)
+    // setTimeout(() => {
+    //   debugger
+    //   render(h('div', '新文本'), app)
+    // }, 2000);
+
+    // // 3、新文本，旧空
+    // render(h('div'), app)
+    // setTimeout(() => {
+    //   debugger
+    //   render(h('div', '新文本'), app)
+    // }, 2000);
+
+
+    // 新：数组
+    // 4、新数组，旧数组
+
+    // // 5、新数组，旧文本
+    // render(h('div', '旧文本'), app)
+    // setTimeout(() => {
+    //   debugger
+    //   render(h('div', h('span', { style: { color: 'red' } }, '新数组')), app)
+    // }, 2000);
+
+    // // 6、新数组，旧空
+    // render(h('div'), app)
+    // setTimeout(() => {
+    //   render(h('div', h('span', { style: { color: 'red' } }, '新数组')), app)
+    // }, 2000);
+
+    // 新：空
+    // // 7、新空，旧数组
+    // render(h('div', h('span', 'hello')), app)
+    // setTimeout(() => {
+    //   render(h('div'), app)
+    // }, 2000);
+
+    // // 8、新空，旧文本
+    // render(h('div', 'hello'), app)
+    // setTimeout(() => {
+    //   render(h('div'), app)
+    // }, 2000);
+
+    // // 9、新空，旧空
+    // render(h('div'), app)
+    // setTimeout(() => {
+    //   render(h('div'), app)
+    // }, 2000);
+
+  </script>
+
+</body>
+
+</html>

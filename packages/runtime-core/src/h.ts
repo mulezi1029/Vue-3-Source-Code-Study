@@ -24,7 +24,7 @@ export function h(type: any, propsOrChildren?: any, children?: any) {
 				? createVNode(type, null, [propsOrChildren])
 				: createVNode(type, propsOrChildren)
 		} else {
-			// 剩下的两种：数组、文本： type text ， type []
+			// 剩下的两种：数组、文本
 			return createVNode(type, null, propsOrChildren) // 数组或者文本
 		}
 	}

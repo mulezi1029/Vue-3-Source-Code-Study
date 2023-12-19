@@ -1,5 +1,6 @@
 export const enum shapeFlags {
-	ELEMENT = 1, // 表明该虚拟节点是一个元素
+  ELEMENT = 1, // 表明该虚拟节点是一个元素
+  
 	FUNCTIONAL_COMPONENT = 1 << 1, // 表明该虚拟节点是一个函数组件
 	STATEFUL_COMPONENT = 1 << 2, // 表明该虚拟节点是一个普通组件
 
