@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+
+<body>
+  <div id="app1"></div>
+  <script type="module">
+    import { h, render, Text, Fragment } from './runtime-dom.esm.js'
+    const childComp = {
+      props: { a: String },
+      render() {
+        // console.log(this.$attrs)
+        // console.log(this.$props)
+        return h(Text, this.a)
+      }
+    }
+    const VueComponent = {
+      data() {
+        return { isShow: false }
+      },
+      render() {
+        return h(Fragment, [
+          h('button', {
+            onClick: () => {
+              this.isShow = !this.isShow
+            }
+          }, '点击切换'),
+          h(childComp, { a: this.isShow ? '显示' : '隐藏' })
+        ])
+      }
+    }
+
+    render(h(VueComponent), app1)
+  </script>
+
+</body>
+
+</html>

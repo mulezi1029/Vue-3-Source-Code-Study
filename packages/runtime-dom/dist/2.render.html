@@ -11,22 +11,21 @@
 <body>
   <div id="app"></div>
   <script type="module">
-    import { h, render } from './runtime-dom.esm.js'
+    import { h, render, Text } from './runtime-dom.esm.js'
 
 
     // children 情况
     // 新：文本
-    // // 1、新文本，旧数组
+    // 1、新文本，旧数组
     // render(h('div', h('span', 'hello')), app)
     // setTimeout(() => {
     //   render(h('div', 'world'), app)
     // }, 2000)
 
     // // 2、新文本，旧文本
-    // render(h('div', '旧文本'), app)
+    // render(h('div', { style: { color: 'red' } }, '旧文本'), app)
     // setTimeout(() => {
-    //   debugger
-    //   render(h('div', '新文本'), app)
+    //   render(h('div', { style: { color: 'green' } }, '新文本'), app)
     // }, 2000);
 
     // // 3、新文本，旧空
@@ -38,13 +37,16 @@
 
 
     // 新：数组
-    // 4、新数组，旧数组
-
+    // // 4、新数组，旧数组
+    // render(h('div', [h('div', '旧'), h(Text, '数组')]), app)
+    // setTimeout(() => {
+    //   render(h('div', h('span', { style: { color: 'red' }, key: '新数组' }, '新数组')), app)
+    // }, 2000);
     // // 5、新数组，旧文本
     // render(h('div', '旧文本'), app)
     // setTimeout(() => {
-    //   debugger
-    //   render(h('div', h('span', { style: { color: 'red' } }, '新数组')), app)
+    //   // debugger
+    //   render(h('div',h('span', { style: { color: 'red' } }, '新数组')), app)
     // }, 2000);
 
     // // 6、新数组，旧空

@@ -7,7 +7,7 @@ export class ReactieEffect {
 	public active = true
 
 	public parent = null
-	constructor(public fn, private scheduler) {
+	constructor(public fn, private scheduler?) {
 		recordEffectScope(this) // 当前scope收集effect
 	}
 	public deps = [] // 记录该响应性函数依赖的响应性属性的集合

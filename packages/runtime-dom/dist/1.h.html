@@ -23,16 +23,16 @@
 
     // h 的使用方法
     // 一个参数
-    console.log(h('div'))
+    console.log('type', h('div'))
     // 两个参数
-    console.log(h('div', { style: { color: 'red' } }))
-    console.log(h('div', h('span')))
-    console.log(h('div', ['hello']))
-    console.log(h('div', 'world'))
+    console.log('type props', h('div', { style: { color: 'red' } }))  // type props
+    console.log('type vnode', h('div', h('span')))  // type vnode
+    console.log('type text', h('div', 'world'))  // type text
+    console.log('type array', h('div', ['world', 'aaa']))  // type array
     // 三个参数
-    console.log(h('div', { style: { color: 'red' } }, 'he'))
-    console.log(h('div', { style: { color: 'red' } }, ['a']))
-    console.log(h('div', { style: { color: 'red' } }, h('span')))
+    console.log('type props text', h('div', { style: { color: 'red' } }, 'he'))
+    console.log('type props array', h('div', { style: { color: 'red' } }, ['a']))
+    console.log('type props vnode', h('div', { style: { color: 'red' } }, h('span')))
     // render(h('div', { style: { color: 'red' } }, 'he'), app)
 
 

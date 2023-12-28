@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+
+<body>
+  <div id="app1"></div>
+  <div id="app2"></div>
+  <script type="module">
+    import { h, render, Text } from './runtime-dom.esm.js'
+    console.log(Text)
+    const VueComponent1 = {
+      data() {
+        return { age: 30, name: 'cy' }
+      },
+      render() {
+        setTimeout(() => {
+          this.age++
+          this.age++
+          this.name = 'ccclly'
+        }, 2000);
+        return h('div', [h(Text, this.age), h(Text, this.name)])
+      }
+    }
+    const VueComponent2 = {
+      data() {
+        return { age: 30, name: 'cy' }
+      },
+      render() {
+        setTimeout(() => {
+          this.age++
+          this.name = 'clly'
+        }, 2000);
+        return h('div', [h(Text, this.age), h(Text, this.name)])
+      }
+    }
+    render(h(VueComponent1), app1)
+    render(h(VueComponent2), app2)
+  </script>
+
+</body>
+
+</html>

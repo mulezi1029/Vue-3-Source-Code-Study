@@ -9,3 +9,6 @@ export function isFunction(value: any): boolean {
 export function isString(value: any): boolean {
 	return typeof value === 'string'
 }
+
+const ownProperty = Object.prototype.hasOwnProperty
+export const hasOwn = (key, value) => ownProperty.call(value, key)
