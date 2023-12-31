@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+
+<body>
+  <div id="app1"></div>
+  <script type="module">
+    import { h, render, Text, Fragment, ref } from './runtime-dom.esm.js'
+
+    const VueComponent = {
+      props: {
+        a: Number
+      },
+      render() {
+        return h(Fragment, [
+          this.$slots.hello(11),
+          this.$slots.world(222)
+        ])
+      }
+    }
+
+    render(
+      h(
+        VueComponent,
+        {
+          a: 1, b: 2,
+        },
+        // 作用域插槽
+        {
+          hello: (a) => h('div', 'hello' + a), world: (b) => h('div', 'world' + b)
+        }
+      ), app1)
+
+    setTimeout(() => {
+      render(
+        h(
+          VueComponent,
+          {
+            a: 1, b: 2,
+          },
+          // 作用域插槽
+          {
+            hello: (a) => h('div', 'cy' + a), world: (b) => h('div', 'ly' + b)
+          }
+        ), app1)
+    }, 1000);
+  </script>
+
+</body>
+
+</html>

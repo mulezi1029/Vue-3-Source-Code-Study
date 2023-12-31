@@ -801,10 +801,17 @@ function createRenderer(options) {
     setupComponent(instance);
     setupRenderEffect(instance, container, anchor);
   };
+  const updateSlots = (instance, nextSlots) => {
+    if (nextSlots) {
+      instance.slots = nextSlots;
+    }
+  };
   const updateComponentPreRender = (instance, nextVNode) => {
     instance.nextVNode = null;
     instance.vnode = nextVNode;
+    debugger;
     updateProps(instance, nextVNode.props);
+    updateSlots(instance, nextVNode.children);
   };
   const setupRenderEffect = (instance, container, anchor) => {
     let render3 = instance.render;
@@ -831,16 +838,18 @@ function createRenderer(options) {
     update();
   };
   const shouldUpdateComponent = (n1, n2) => {
-    const { props: prevProps } = n1;
-    const { props: nextProps } = n2;
+    const { props: prevProps, children: preChildren } = n1;
+    const { props: nextProps, children: nextChildren } = n2;
+    if (preChildren || nextChildren)
+      return true;
     if (prevProps === nextProps)
       return false;
     return hasPropsChanged(prevProps, nextProps);
   };
   const updateComponent = (n1, n2) => {
+    debugger;
     const instance = n2.component = n1.component;
     if (shouldUpdateComponent(n1, n2)) {
-      debugger;
       instance.nextVNode = n2;
       instance.update();
     }

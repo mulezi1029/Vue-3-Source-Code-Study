@@ -342,10 +342,18 @@ export function createRenderer(options) {
 		setupRenderEffect(instance, container, anchor)
 	}
 
+	const updateSlots = (instance, nextSlots) => {
+		if (nextSlots) {
+			instance.slots = nextSlots
+			// Object.assign(instance.slots, nextSlots)
+		}
+	}
 	const updateComponentPreRender = (instance, nextVNode) => {
 		instance.nextVNode = null
 		instance.vnode = nextVNode // 更新实例的虚拟节点未新的虚拟节点
+		debugger
 		updateProps(instance, nextVNode.props) // 更新组件 props
+		updateSlots(instance, nextVNode.children) // 更新插槽
 	}
 
 	const setupRenderEffect = (instance, container, anchor) => {
@@ -384,18 +392,19 @@ export function createRenderer(options) {
 	}
 
 	const shouldUpdateComponent = (n1, n2) => {
-		const { props: prevProps } = n1
-		const { props: nextProps } = n2
+		const { props: prevProps, children: preChildren } = n1
+		const { props: nextProps, children: nextChildren } = n2 // 组件插槽
+		if (preChildren || nextChildren) return true
 		if (prevProps === nextProps) return false
 		return hasPropsChanged(prevProps, nextProps)
 	}
 
 	const updateComponent = (n1, n2) => {
+		debugger
 		const instance = (n2.component = n1.component) // 复用组件实例
 		// 根据组件属性与插槽是否改变，来判断是否应该进行更新属性与插槽
 		if (shouldUpdateComponent(n1, n2)) {
 			// 更新组件属性 插槽  根据新的组件虚拟节点
-			debugger
 			instance.nextVNode = n2 // 组件实例记录新的组件虚拟节点
 			instance.update() // 组件 effect 重新执行进行更新
 		}
