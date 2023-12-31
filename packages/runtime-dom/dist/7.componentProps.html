@@ -15,8 +15,6 @@
     const childComp = {
       props: { a: String },
       render() {
-        // console.log(this.$attrs)
-        // console.log(this.$props)
         return h(Text, this.a)
       }
     }
@@ -31,7 +29,7 @@
               this.isShow = !this.isShow
             }
           }, '点击切换'),
-          h(childComp, { a: this.isShow ? '显示' : '隐藏' })
+          h(childComp, { a: this.isShow ? '显示' : '隐藏',b:2 })
         ])
       }
     }

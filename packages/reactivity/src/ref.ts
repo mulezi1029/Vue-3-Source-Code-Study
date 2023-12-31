@@ -5,7 +5,9 @@ import { reactive } from './reactive'
 function toReactive(value) {
 	return isObject(value) ? reactive(value) : value
 }
-
+export function isRef(value) {
+	return value && value.__v_isRef
+}
 class RefImpl {
 	dep
 	_value

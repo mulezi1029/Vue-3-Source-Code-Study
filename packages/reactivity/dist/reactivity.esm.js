@@ -140,6 +140,84 @@ function triggerEffects(dep) {
   }
 }
 
+// packages/reactivity/src/ref.ts
+function toReactive(value) {
+  return isObject(value) ? reactive(value) : value;
+}
+function isRef(value) {
+  return value && value.__v_isRef;
+}
+var RefImpl = class {
+  constructor(rawValue) {
+    this.rawValue = rawValue;
+    this.__v_isRef = true;
+    this._value = toReactive(rawValue);
+  }
+  get value() {
+    if (activeEffect) {
+      trackEffects(this.dep || (this.dep = /* @__PURE__ */ new Set()));
+    }
+    return this._value;
+  }
+  set value(newValue) {
+    if (newValue !== this.rawValue) {
+      this._value = toReactive(newValue);
+      this.rawValue = newValue;
+      triggerEffects(this.dep);
+    }
+  }
+};
+function ref(value) {
+  return new RefImpl(value);
+}
+var ObjectRefImpl = class {
+  constructor(_target, _key) {
+    this._target = _target;
+    this._key = _key;
+    this.__v_isRef = true;
+  }
+  get value() {
+    if (activeEffect) {
+      trackEffects(this.dep || (this.dep = /* @__PURE__ */ new Set()));
+    }
+    this._value = this._target[this._key];
+    return this._value;
+  }
+  set value(newValue) {
+    if (newValue !== this._value) {
+      this._target[this._key] = newValue;
+      this._value = this._target[this._key];
+      triggerEffects(this.dep);
+    }
+  }
+};
+function toRef(target, key) {
+  return new ObjectRefImpl(target, key);
+}
+function toRefs(target) {
+  const res = {};
+  for (let key in target) {
+    res[key] = toRef(target, key);
+  }
+  return res;
+}
+function proxyRefs(objectWithRefs) {
+  return new Proxy(objectWithRefs, {
+    get(target, key, receiver) {
+      const v = Reflect.get(target, key, receiver);
+      return v.__v_isRef ? v.value : v;
+    },
+    set(target, key, value, receiver) {
+      const oldValue = target[key];
+      if (!oldValue.__v_isRef) {
+        return Reflect.set(target, key, value, receiver);
+      }
+      oldValue.value = value;
+      return true;
+    }
+  });
+}
+
 // packages/reactivity/src/baseHandlers.ts
 var baseHandlers = {
   get(target, key, receiver) {
@@ -148,8 +226,11 @@ var baseHandlers = {
     }
     track(target, key);
     let res = Reflect.get(target, key, receiver);
+    if (isRef(res)) {
+      return res.value;
+    }
     if (isObject(res)) {
-      res = reactive(res);
+      return reactive(res);
     }
     return res;
   },
@@ -279,81 +360,6 @@ function watch(source, cb, options = {}) {
 function watchEffect(effect2, options = {}) {
   doWatch(effect2, null, options);
 }
-
-// packages/reactivity/src/ref.ts
-function toReactive(value) {
-  return isObject(value) ? reactive(value) : value;
-}
-var RefImpl = class {
-  constructor(rawValue) {
-    this.rawValue = rawValue;
-    this.__v_isRef = true;
-    this._value = toReactive(rawValue);
-  }
-  get value() {
-    if (activeEffect) {
-      trackEffects(this.dep || (this.dep = /* @__PURE__ */ new Set()));
-    }
-    return this._value;
-  }
-  set value(newValue) {
-    if (newValue !== this.rawValue) {
-      this._value = toReactive(newValue);
-      this.rawValue = newValue;
-      triggerEffects(this.dep);
-    }
-  }
-};
-function ref(value) {
-  return new RefImpl(value);
-}
-var ObjectRefImpl = class {
-  constructor(_target, _key) {
-    this._target = _target;
-    this._key = _key;
-    this.__v_isRef = true;
-  }
-  get value() {
-    if (activeEffect) {
-      trackEffects(this.dep || (this.dep = /* @__PURE__ */ new Set()));
-    }
-    this._value = this._target[this._key];
-    return this._value;
-  }
-  set value(newValue) {
-    if (newValue !== this._value) {
-      this._target[this._key] = newValue;
-      this._value = this._target[this._key];
-      triggerEffects(this.dep);
-    }
-  }
-};
-function toRef(target, key) {
-  return new ObjectRefImpl(target, key);
-}
-function toRefs(target) {
-  const res = {};
-  for (let key in target) {
-    res[key] = toRef(target, key);
-  }
-  return res;
-}
-function proxyRefs(objectWithRefs) {
-  return new Proxy(objectWithRefs, {
-    get(target, key, receiver) {
-      const v = Reflect.get(target, key, receiver);
-      return v.__v_isRef ? v.value : v;
-    },
-    set(target, key, value, receiver) {
-      const oldValue = target[key];
-      if (!oldValue.__v_isRef) {
-        return Reflect.set(target, key, value, receiver);
-      }
-      oldValue.value = value;
-      return true;
-    }
-  });
-}
 export {
   ReactieEffect,
   ReactiveFlags,
@@ -363,6 +369,7 @@ export {
   effect,
   effectScope,
   isReactive,
+  isRef,
   proxyRefs,
   reactive,
   recordEffectScope,

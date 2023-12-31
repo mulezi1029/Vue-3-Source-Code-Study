@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+
+<body>
+  <div id="app1"></div>
+  <script type="module">
+    import { h, render, Text, Fragment, ref } from './runtime-dom.esm.js'
+
+    const VueComponent = {
+      props: {
+        a: Number
+      },
+      setup(props, ctx) {
+        const name = ref('cy')
+        const age = ref('22')
+
+        // 子组件触发父组件事件
+        const handleClick = () => {
+          ctx.emit('myEvent', 'a', 'b')
+        }
+        return {
+          name,
+          age,
+          handleClick
+        }
+      },
+
+      render(proxy) {
+        // setTimeout(() => {
+        //   this.age++
+        // }, 1000)
+        console.log(proxy == this)
+
+        // 子组件按钮绑定点击事件，触发父组件的事件
+        return h(Fragment, [
+          h('button', {
+            onClick: () => {
+              this.handleClick()
+            }
+          }, '点击'),
+        ])
+      }
+    }
+
+
+    // 组件绑定事件
+    render(h(VueComponent, {
+      a: 1, b: 2, onMyEvent: (...args) => {
+        alert(`${args[0] + args[1]}`)
+      }
+    }), app1)
+  </script>
+
+</body>
+
+</html>

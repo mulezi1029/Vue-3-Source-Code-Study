@@ -344,8 +344,8 @@ export function createRenderer(options) {
 
 	const updateComponentPreRender = (instance, nextVNode) => {
 		instance.nextVNode = null
-		instance.vnode = nextVNode
-		updateProps(instance.props, nextVNode.props)
+		instance.vnode = nextVNode // 更新实例的虚拟节点未新的虚拟节点
+		updateProps(instance, nextVNode.props) // 更新组件 props
 	}
 
 	const setupRenderEffect = (instance, container, anchor) => {
@@ -354,7 +354,7 @@ export function createRenderer(options) {
 		const componentFn = () => {
 			// 1. 组件初次挂载
 			if (!instance.isMounted) {
-				const subTree = render.call(instance.proxy) // 获取组件要被渲染的UI结构的虚拟节点，改变 this 指向为组件实例的代理
+				const subTree = render.call(instance.proxy, instance.proxy) // 获取组件要被渲染的UI结构的虚拟节点，改变 this 指向为组件实例的代理
 				patch(null, subTree, container, anchor) // 渲染虚拟节点
 				instance.subTree = subTree // 组件实例缓存第一次渲染产生的 vnode
 				instance.isMounted = true // 标志组件已经挂载过
@@ -367,16 +367,18 @@ export function createRenderer(options) {
 					// 更新组件属性、插槽
 					updateComponentPreRender(instance, nextVNode)
 				}
-				const subTree = render.call(instance.proxy) // 获取组件要被渲染的新节点 this 指向组件实例的代理
+				const subTree = render.call(instance.proxy, instance.proxy) // 获取组件要被渲染的新节点 this 指向组件实例的代理
 				// 组件状态更新
 				patch(instance.subTree, subTree, container, anchor)
 				instance.subTree = subTree // 组件更新产生的新 vnode
 			}
 		}
+
 		const effect = new ReactieEffect(componentFn, () => {
 			// 异步更新逻辑
 			queueJob(update)
 		})
+
 		const update = (instance.update = effect.run.bind(effect))
 		update() // 执行组件更新
 	}
@@ -394,8 +396,8 @@ export function createRenderer(options) {
 		if (shouldUpdateComponent(n1, n2)) {
 			// 更新组件属性 插槽  根据新的组件虚拟节点
 			debugger
-			instance.nextVNode = n2
-			instance.update()
+			instance.nextVNode = n2 // 组件实例记录新的组件虚拟节点
+			instance.update() // 组件 effect 重新执行进行更新
 		}
 	}
 

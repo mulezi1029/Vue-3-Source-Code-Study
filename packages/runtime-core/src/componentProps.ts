@@ -21,12 +21,17 @@ export function initProps(instance, rawProps) {
 	instance.attrs = attrs
 }
 
-export function updateProps(instanceProps, nextProps) {
-	for (const key in nextProps) {
-		instanceProps[key] = nextProps[key]
+export function updateProps(instance, nextRawProps) {
+	const { props: instanceProps, propsOptions, attrs } = instance
+	for (const key in nextRawProps) {
+		if (key in propsOptions) {
+			instanceProps[key] = nextRawProps[key]
+		} else {
+			attrs[key] = nextRawProps[key]
+		}
 	}
 	for (const key in instanceProps) {
-		if (!(key in nextProps)) {
+		if (!(key in nextRawProps)) {
 			delete instanceProps[key]
 		}
 	}

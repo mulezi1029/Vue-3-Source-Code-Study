@@ -1,6 +1,7 @@
 import { isObject } from '@vue/shared'
 import { track, trigger } from './effect'
 import { reactive, ReactiveFlags } from './reactive'
+import { isRef } from './ref'
 
 export const baseHandlers = {
 	get(target, key, receiver) {
@@ -11,10 +12,17 @@ export const baseHandlers = {
 
 		track(target, key)
 		let res = Reflect.get(target, key, receiver)
+
+		// 如果访问的属性其值是 ref 时，自动拆包
+		if (isRef(res)) {
+			return res.value
+		}
+
 		// 如果访问的属性其值还是对象，那么就进行深度代理
 		if (isObject(res)) {
-			res = reactive(res)
+			return reactive(res)
 		}
+
 		return res
 	},
 
