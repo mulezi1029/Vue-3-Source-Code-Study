@@ -36,8 +36,12 @@ export function createVNode(type: any, props?: any, children?: any) {
 	}
 
 	if (children) {
-		// children 要么是数组要么是文本
-		const type = isString(children) ? shapeFlags.TEXT_CHILDREN : shapeFlags.ARRAY_CHILDREN
+		// children 要么是数组要么是插槽要么是文本
+		const type = isString(children)
+			? shapeFlags.TEXT_CHILDREN
+			: isObject(children)
+			? shapeFlags.SLOTS_CHILDREN
+			: shapeFlags.ARRAY_CHILDREN
 		vnode.shapeFlag |= type
 	}
 
