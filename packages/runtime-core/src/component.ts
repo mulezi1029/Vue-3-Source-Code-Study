@@ -16,13 +16,20 @@ export function createComponentInstane(vnode) {
 		propsOptions: vnode.type.props || {}, // 组件声明的 props 选项，根据这个和所有的 props，设置 props和attrs
 		proxy: null, // 组件实例的代理， this 指向整合，可以访问到 data 也可以 props
 
-		steupState: null,
-		exposed: null, // ref 模板引用时，获取组件实例暴露处的内容
-
 		// 组件生命周期
+		bm: null,
+		m: null,
+		bu: null,
+		u: null,
+		bum: null,
+		um: null,
+
 		// 组件插槽
 		slots: null,
+
 		// 组件事件
+		steupState: null,
+		exposed: null, // ref 模板引用时，获取组件实例暴露处的内容
 	}
 	return instance
 }
@@ -85,7 +92,6 @@ export function setupComponent(instance) {
 			emit: (event, ...agrs) => {
 				const eventName = `on${event[0].toUpperCase() + event.slice(1)}`
 				const handler = instance.attrs[eventName]
-				console.log(handler)
 				handler && handler(...agrs)
 			},
 			expose(exposed) {
@@ -95,6 +101,7 @@ export function setupComponent(instance) {
 		}
 
 		const setupRes = setup(instance.props, setupContext)
+
 		if (isFunction(setupRes)) {
 			instance.render = setupRes
 		} else {

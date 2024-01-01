@@ -25,6 +25,12 @@
         const handleClick = () => {
           ctx.emit('myEvent', 'a', 'b')
         }
+
+        ctx.expose({
+          a: 1,
+          name
+        })
+
         return {
           name,
           age,

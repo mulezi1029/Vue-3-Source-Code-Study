@@ -339,6 +339,7 @@ export function createRenderer(options) {
 		// 2）组件实例初始化，设置属性等数据
 		setupComponent(instance)
 		// 3）创建组件 effect，收集依赖
+		debugger
 		setupRenderEffect(instance, container, anchor)
 	}
 
