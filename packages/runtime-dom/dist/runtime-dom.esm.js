@@ -577,7 +577,9 @@ function createVNode(type, props, children) {
     children,
     shapeFlag,
     key: props?.key,
-    el: null
+    el: null,
+    component: null
+    // 组件的话才会赋值，否则就是 null
   };
   if (children) {
     const type2 = isString(children) ? 8 /* TEXT_CHILDREN */ : isObject(children) ? 32 /* SLOTS_CHILDREN */ : 16 /* ARRAY_CHILDREN */;
@@ -818,7 +820,6 @@ function createRenderer(options) {
   const mountComponent = (vnode, container, anchor) => {
     const instance = vnode.component = createComponentInstane(vnode);
     setupComponent(instance);
-    debugger;
     setupRenderEffect(instance, container, anchor);
   };
   const updateSlots = (instance, nextSlots) => {
@@ -918,10 +919,15 @@ function createRenderer(options) {
         }
     }
   };
+  const unmountComponent = (subTree) => {
+    return unmount(subTree);
+  };
   const unmount = (vnode) => {
     const { shapeFlag } = vnode;
     if (vnode.type === Fragment) {
       return unmountChildren(vnode.children);
+    } else if (shapeFlag & 6 /* COMPONENT */) {
+      return unmountComponent(vnode.component.subTree);
     }
     hostRemove(vnode.el);
   };

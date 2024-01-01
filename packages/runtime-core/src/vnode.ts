@@ -33,6 +33,7 @@ export function createVNode(type: any, props?: any, children?: any) {
 		shapeFlag,
 		key: props?.key,
 		el: null,
+		component: null, // 组件的话才会赋值，否则就是 null
 	}
 
 	if (children) {

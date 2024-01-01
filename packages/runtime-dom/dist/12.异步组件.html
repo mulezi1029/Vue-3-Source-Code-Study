@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+
+<body>
+  <div id="app"></div>
+  <script type="module">
+    import { defineAsyncComponent, h, render, Text, Fragment, ref, getCurrentInstance, onMounted } from '/node_modules/@vue/runtime-dom/dist/runtime-dom.esm-browser.js'
+    // import { h, render, Text, Fragment, ref, getCurrentInstance, onMounted } from './runtime-dom.esm.js'
+
+    const VueComponent = defineAsyncComponent(() => {
+      return new Promise(resolve => {
+        setTimeout(() => {
+          resolve({
+            render() {
+              return h(Text, 'hello liuyue')
+            }
+          })
+        }, 2000);
+      })
+    })
+
+    console.log(VueComponent)
+    render(h(VueComponent), app)
+
+  </script>
+
+</body>
+
+</html>

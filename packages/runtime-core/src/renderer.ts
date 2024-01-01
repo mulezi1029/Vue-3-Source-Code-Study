@@ -339,7 +339,6 @@ export function createRenderer(options) {
 		// 2）组件实例初始化，设置属性等数据
 		setupComponent(instance)
 		// 3）创建组件 effect，收集依赖
-		debugger
 		setupRenderEffect(instance, container, anchor)
 	}
 
@@ -485,7 +484,15 @@ export function createRenderer(options) {
 		}
 	}
 
-	// 页面中删除 vnode 对应的节点
+	const unmountComponent = (subTree) => {
+		return unmount(subTree)
+	}
+
+	// 页面中删除 vnode 对应的节点:
+	// 1. Fragment --> 卸载 children
+	// 2. Text --> 卸载 el
+	// 3. Element --> 卸载 el
+	// 4. Component --> 卸载 subTree
 	const unmount = (vnode) => {
 		const { shapeFlag } = vnode
 		// 删除 vnode 对应在页面上的真实节点
@@ -493,9 +500,12 @@ export function createRenderer(options) {
 		// 如果 vnode 本身标识的结构实际上不被渲染到页面，页面上渲染的是 vnode 的 children，则要卸载其 children
 		if (vnode.type === Fragment) {
 			return unmountChildren(vnode.children) // 递归删除子节点
+		} else if (shapeFlag & shapeFlags.COMPONENT) {
+			// 卸载组件
+			return unmountComponent(vnode.component.subTree)
 		}
 
-		hostRemove(vnode.el) // 删除真实节点
+		hostRemove(vnode.el) // 删除节点
 	}
 
 	/* 渲染器：将 vnode 变为真实 DOM 渲染到 container 中*/
