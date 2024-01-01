@@ -1,7 +1,7 @@
 // 创建与平台无关的渲染器
 
 import { ReactieEffect, reactive } from '@vue/reactivity'
-import { hasOwn } from '@vue/shared'
+import { hasOwn, invokeArrayFns } from '@vue/shared'
 import { shapeFlags } from 'packages/shared/src/shapeFlags'
 import { createComponentInstane, setupComponent } from './component'
 import { hasPropsChanged, initProps, updateProps } from './componentProps'
@@ -361,6 +361,13 @@ export function createRenderer(options) {
 		let render = instance.render
 		// componentFn 执行过程中会进行依赖收集
 		const componentFn = () => {
+			const { bm, m } = instance // 获取组件实例的钩子函数
+
+			// 组件挂载之前，调用 bm 钩子：此时调用钩子时 setup 函数早已运行完成，currentInstance 已经清空了
+			if (bm) {
+				invokeArrayFns(bm) // 此时执行钩子函数，是在 setup函数执行后的，全局记录组件实例的都清空了，获取不到了组件实例，需要再次进行处理
+			}
+
 			// 1. 组件初次挂载
 			if (!instance.isMounted) {
 				const subTree = render.call(instance.proxy, instance.proxy) // 获取组件要被渲染的UI结构的虚拟节点，改变 this 指向为组件实例的代理
@@ -368,18 +375,36 @@ export function createRenderer(options) {
 				instance.subTree = subTree // 组件实例缓存第一次渲染产生的 vnode
 				instance.isMounted = true // 标志组件已经挂载过
 			}
+
+			// 组件挂载完成执行钩子
+			if (m) {
+				invokeArrayFns(m)
+			}
+
 			// 2. 组件非初次挂载
 			else {
+				const { bu, u } = instance
 				// 组件更新：1. 组件本身的属性、插槽变化引起的更新  2. 组件内依赖的状态变化引起的更新
 				const { nextVNode } = instance
 				if (nextVNode) {
 					// 更新组件属性、插槽
 					updateComponentPreRender(instance, nextVNode)
 				}
+
+				// 组件更新前钩子
+				if (bu) {
+					invokeArrayFns(bu)
+				}
+
 				const subTree = render.call(instance.proxy, instance.proxy) // 获取组件要被渲染的新节点 this 指向组件实例的代理
 				// 组件状态更新
 				patch(instance.subTree, subTree, container, anchor)
 				instance.subTree = subTree // 组件更新产生的新 vnode
+
+				// 组件更新后钩子
+				if (u) {
+					invokeArrayFns(u)
+				}
 			}
 		}
 
@@ -462,12 +487,14 @@ export function createRenderer(options) {
 
 	// 页面中删除 vnode 对应的节点
 	const unmount = (vnode) => {
+		const { shapeFlag } = vnode
 		// 删除 vnode 对应在页面上的真实节点
 		// 如果 vnode 标识的节点本身也被渲染在页面上，就删除其对应的节点
 		// 如果 vnode 本身标识的结构实际上不被渲染到页面，页面上渲染的是 vnode 的 children，则要卸载其 children
 		if (vnode.type === Fragment) {
 			return unmountChildren(vnode.children) // 递归删除子节点
 		}
+
 		hostRemove(vnode.el) // 删除真实节点
 	}
 

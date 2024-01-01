@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+
+<body>
+  <div id="app1"></div>
+  <script type="module">
+    import { h, render, Text, Fragment, ref, getCurrentInstance, onMounted } from './runtime-dom.esm.js'
+
+    const VueComponent = {
+      props: {
+        a: Number
+      },
+
+      setup(props, ctx) {
+        const instance = getCurrentInstance()
+        onMounted(() => {
+          const instance = getCurrentInstance()
+          console.log(instance)
+          console.log('mounted')
+        })
+        onMounted(() => {
+          console.log('mounted')
+        })
+        console.log(instance)
+
+        debugger
+        // 返回 render 函数 == 等价于写的组件模板 因为组件模板会被编译成 render 函数
+        return function () {
+          return h(Fragment, [
+            ctx.slots.hello(1),
+            ctx.slots.world(2)
+          ])
+        }
+      },
+
+    }
+
+
+    render(
+      h(
+        VueComponent,
+        {
+          a: 1, b: 2,
+        },
+        // 作用域插槽
+        {
+          hello: (a) => h('div', 'hello' + a), world: (b) => h('div', 'world' + b)
+        }
+      ), app1)
+  </script>
+
+</body>
+
+</html>

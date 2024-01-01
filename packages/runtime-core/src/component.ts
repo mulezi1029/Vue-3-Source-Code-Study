@@ -78,6 +78,16 @@ function initSlots(instance, children) {
 	}
 }
 
+export let currentInstance // 当前正在执行组件实例
+
+export function setCurrentInstance(instance) {
+	currentInstance = instance
+}
+
+export function getCurrentInstance(instance) {
+	return currentInstance
+}
+
 export function setupComponent(instance) {
 	const { type, props, children } = instance.vnode
 	// 将传进来的所有的 props 根据情况解析为组件的 props 与 attrs，放到组件实例上
@@ -89,6 +99,7 @@ export function setupComponent(instance) {
 
 	const { setup } = type
 	if (setup) {
+		// setup 的第二个参数
 		const setupContext = {
 			attrs: instance.attrs,
 			emit: (event, ...agrs) => {
@@ -101,8 +112,11 @@ export function setupComponent(instance) {
 			},
 			slots: instance.slots,
 		}
-
+		// setup 数执行前，将当前实例放在全局上去
+		setCurrentInstance(instance)
 		const setupRes = setup(instance.props, setupContext)
+		// setup 函数执行后，从全局清除
+		setCurrentInstance(null)
 
 		if (isFunction(setupRes)) {
 			instance.render = setupRes

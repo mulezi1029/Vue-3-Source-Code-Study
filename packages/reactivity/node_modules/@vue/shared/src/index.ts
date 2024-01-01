@@ -12,3 +12,9 @@ export function isString(value: any): boolean {
 
 const ownProperty = Object.prototype.hasOwnProperty
 export const hasOwn = (key, value) => ownProperty.call(value, key)
+
+export function invokeArrayFns(fns, args?) {
+	fns.forEach((fn) => {
+		fn(args)
+	})
+}

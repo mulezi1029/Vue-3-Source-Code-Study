@@ -10,6 +10,11 @@ function isString(value) {
 }
 var ownProperty = Object.prototype.hasOwnProperty;
 var hasOwn = (key, value) => ownProperty.call(value, key);
+function invokeArrayFns(fns, args) {
+  fns.forEach((fn) => {
+    fn(args);
+  });
+}
 
 // packages/reactivity/src/effectScope.ts
 var activeEffectScope;
@@ -487,6 +492,13 @@ function initSlots(instance, children) {
     }
   }
 }
+var currentInstance;
+function setCurrentInstance(instance) {
+  currentInstance = instance;
+}
+function getCurrentInstance(instance) {
+  return currentInstance;
+}
 function setupComponent(instance) {
   const { type, props, children } = instance.vnode;
   initProps(instance, props);
@@ -506,7 +518,9 @@ function setupComponent(instance) {
       },
       slots: instance.slots
     };
+    setCurrentInstance(instance);
     const setupRes = setup(instance.props, setupContext);
+    setCurrentInstance(null);
     if (isFunction(setupRes)) {
       instance.render = setupRes;
     } else {
@@ -822,19 +836,33 @@ function createRenderer(options) {
   const setupRenderEffect = (instance, container, anchor) => {
     let render3 = instance.render;
     const componentFn = () => {
+      const { bm, m } = instance;
+      if (bm) {
+        invokeArrayFns(bm);
+      }
       if (!instance.isMounted) {
         const subTree = render3.call(instance.proxy, instance.proxy);
         patch(null, subTree, container, anchor);
         instance.subTree = subTree;
         instance.isMounted = true;
+      }
+      if (m) {
+        invokeArrayFns(m);
       } else {
+        const { bu, u } = instance;
         const { nextVNode } = instance;
         if (nextVNode) {
           updateComponentPreRender(instance, nextVNode);
         }
+        if (bu) {
+          invokeArrayFns(bu);
+        }
         const subTree = render3.call(instance.proxy, instance.proxy);
         patch(instance.subTree, subTree, container, anchor);
         instance.subTree = subTree;
+        if (u) {
+          invokeArrayFns(u);
+        }
       }
     };
     const effect2 = new ReactieEffect(componentFn, () => {
@@ -891,6 +919,7 @@ function createRenderer(options) {
     }
   };
   const unmount = (vnode) => {
+    const { shapeFlag } = vnode;
     if (vnode.type === Fragment) {
       return unmountChildren(vnode.children);
     }
@@ -1046,6 +1075,40 @@ function h(type, propsOrChildren, children) {
   }
 }
 
+// packages/runtime-core/src/apiLifeCycle.ts
+var LifeCycleHooks = /* @__PURE__ */ ((LifeCycleHooks2) => {
+  LifeCycleHooks2["BEFORE_CREATE"] = "bc";
+  LifeCycleHooks2["CREATED"] = "c";
+  LifeCycleHooks2["BEFORE_MOUNT"] = "bm";
+  LifeCycleHooks2["MOUNTED"] = "m";
+  LifeCycleHooks2["BEFORE_UPDATE"] = "bu";
+  LifeCycleHooks2["UPDATED"] = "u";
+  LifeCycleHooks2["BEFORE_UNMOUNT"] = "bum";
+  LifeCycleHooks2["UNMOUNTED"] = "um";
+  LifeCycleHooks2["DEACTIVATED"] = "da";
+  LifeCycleHooks2["ACTIVATED"] = "a";
+  return LifeCycleHooks2;
+})(LifeCycleHooks || {});
+function createHook(type) {
+  return (hook, target = currentInstance) => {
+    if (target) {
+      const hooks = target[type] || (target[type] = []);
+      const wrapperHook = () => {
+        setCurrentInstance(target);
+        hook();
+        setCurrentInstance(null);
+      };
+      hooks.push(wrapperHook);
+    }
+  };
+}
+var onBeforeMount = createHook("bm" /* BEFORE_MOUNT */);
+var onMounted = createHook("m" /* MOUNTED */);
+var onBeforeUpdate = createHook("bu" /* BEFORE_UPDATE */);
+var onUpdated = createHook("u" /* UPDATED */);
+var onBeforeUnmount = createHook("bum" /* BEFORE_UNMOUNT */);
+var onUnmounted = createHook("um" /* UNMOUNTED */);
+
 // packages/runtime-dom/src/index.ts
 var renderOptions = Object.assign(nodeOps, { patchProp });
 var render = (vnode, container) => {
@@ -1053,26 +1116,38 @@ var render = (vnode, container) => {
 };
 export {
   Fragment,
+  LifeCycleHooks,
   ReactieEffect,
   ReactiveFlags,
   Text,
   activeEffect,
   activeEffectScope,
   computed,
+  createComponentInstane,
   createRenderer,
   createVNode,
+  currentInstance,
   effect,
   effectScope,
+  getCurrentInstance,
   h,
   isReactive,
   isRef,
   isSameVNodeType,
   isVNode,
+  onBeforeMount,
+  onBeforeUnmount,
+  onBeforeUpdate,
+  onMounted,
+  onUnmounted,
+  onUpdated,
   proxyRefs,
   reactive,
   recordEffectScope,
   ref,
   render,
+  setCurrentInstance,
+  setupComponent,
   toRef,
   toRefs,
   track,
