@@ -33,11 +33,13 @@ export function createComponentInstane(vnode) {
 	}
 	return instance
 }
+
 const publicProperties = {
 	$attrs: (target) => target.attrs,
 	$props: (target) => target.props,
 	$slots: (target) => target.slots,
 }
+
 const PublicInstanceProxyHandlers = {
 	// 对组件实例代理，实现 this.xxxKey 访问到 data 和 props
 	get(target, key) {
