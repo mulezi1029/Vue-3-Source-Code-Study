@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equivh(VueComp)"X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+
+<body>
+  <div id="app"></div>
+  <script type="module">
+    import { h, render, Text, Fragment, provide, reactive, toRef, inject, getCurrentInstance } from './runtime-dom.esm.js'
+
+    const GrandSon = {
+      setup() {
+        console.log(getCurrentInstance())
+        debugger
+        const age = inject('age')
+        const name = inject('name')
+        console.log(age, name)
+        return function () {
+          return h(Fragment, [
+            h('div', 'hello'),
+            h(Text, 'world')
+          ])
+        }
+      },
+
+    }
+
+    const Child = {
+      setup() {
+        provide('age', 20)
+        return function () {
+          return h(GrandSon)
+        }
+      }
+    }
+
+    const VueComp = {
+      setup() {
+        const state = reactive({
+          name: 'cy'
+        })
+        provide('age', 4546)
+        provide('name', toRef(state.name))
+        return function () {
+          return h(Child)
+        }
+      }
+    }
+
+    debugger
+    render(h(VueComp), app)
+  </script>
+
+</body>
+
+</html>

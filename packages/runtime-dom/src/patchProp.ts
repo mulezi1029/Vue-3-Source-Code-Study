@@ -12,17 +12,20 @@ import { patchStyle } from './module/style'
  * @param nextVal 新值
  */
 export const patchProp = (el: Element, key, preVal, nextVal) => {
+	// class
 	if (key === 'class') {
-		// class
 		patchClass(el, nextVal)
-	} else if (key === 'style') {
-		// style
+	}
+	// style
+	else if (key === 'style') {
 		patchStyle(el, preVal, nextVal)
-	} else if (/^on[^a-z]/.test(key)) {
-		// event
+	}
+	// event
+	else if (/^on[^a-z]/.test(key)) {
 		patchEvents(el, key, preVal, nextVal)
-	} else {
-		// attr
+	}
+	// attr
+	else {
 		patchAttrs(el, key, nextVal)
 	}
 }

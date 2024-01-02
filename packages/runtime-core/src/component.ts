@@ -3,7 +3,7 @@ import { hasOwn, isFunction } from '@vue/shared'
 import { shapeFlags } from 'packages/shared/src/shapeFlags'
 import { initProps } from './componentProps'
 
-export function createComponentInstane(vnode) {
+export function createComponentInstane(vnode, parent) {
 	//  组件实例
 	const instance = {
 		data: null,
@@ -15,7 +15,6 @@ export function createComponentInstane(vnode) {
 		attrs: {}, // 组件未声明的属性
 		propsOptions: vnode.type.props || {}, // 组件声明的 props 选项，根据这个和所有的 props，设置 props和attrs
 		proxy: null, // 组件实例的代理， this 指向整合，可以访问到 data 也可以 props
-
 		// 组件生命周期
 		bm: null,
 		m: null,
@@ -23,13 +22,11 @@ export function createComponentInstane(vnode) {
 		u: null,
 		bum: null,
 		um: null,
-
-		// 组件插槽
-		slots: null,
-
-		// 组件事件
+		slots: null, // 组件插槽
 		steupState: null,
 		exposed: null, // ref 模板引用时，获取组件实例暴露处的内容
+		parent: parent, // 记录父组件实例
+		provides: parent ? parent.provides : Object.create(null), // 记录父组件提供的内容
 	}
 	return instance
 }
@@ -90,9 +87,9 @@ export function getCurrentInstance(instance) {
 
 export function setupComponent(instance) {
 	const { type, props, children } = instance.vnode
-	// 将传进来的所有的 props 根据情况解析为组件的 props 与 attrs，放到组件实例上
+	// 根据 vnode.props 将组件所有的属性，根据组件是否声明解析为组件 props 与 attrs，放到组件实例上
 	initProps(instance, props)
-	// 初始化组件的插槽
+	// 根据 vnode.children 初始化组件的插槽
 	initSlots(instance, children)
 	// 代理组件实例，处理 this 指向，实现 this.xxxKey 访问到 data 和 props 中对应的属性
 	instance.proxy = new Proxy(instance, PublicInstanceProxyHandlers)
@@ -112,10 +109,10 @@ export function setupComponent(instance) {
 			},
 			slots: instance.slots,
 		}
-		// setup 数执行前，将当前实例放在全局上去
+		// setup 函数执行前，将当前实例放在全局上去，使得在 setup 函数内能够访问到当前实例
 		setCurrentInstance(instance)
 		const setupRes = setup(instance.props, setupContext)
-		// setup 函数执行后，从全局清除
+		// setup 函数执行后，从全局清除，当前实例只能在 setup 函数内访问到
 		setCurrentInstance(null)
 
 		if (isFunction(setupRes)) {

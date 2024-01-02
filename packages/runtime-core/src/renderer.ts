@@ -21,10 +21,10 @@ export function createRenderer(options) {
 		nextSibling: hostNextSibling,
 	} = options
 
-	const mountChildren = (children, el) => {
+	const mountChildren = (children, el, parent) => {
 		for (let i = 0; i < children.length; i++) {
 			const child = children[i]
-			patch(null, child, el) // 这里直接调用 mountElement(child,el) 也可以吧？
+			patch(null, child, el, null, parent) // 这里直接调用 mountElement(child,el) 也可以吧？--- 不能直接mountElement，因为child可能是其他类型，不是element
 		}
 	}
 
@@ -52,6 +52,7 @@ export function createRenderer(options) {
 		}
 	}
 
+	// 最长递增子序列
 	function getSequence(arr) {
 		let res = [0]
 		let len = arr.length
@@ -90,26 +91,26 @@ export function createRenderer(options) {
 		return res
 	}
 
+	// 全量的diff算法  比对过程是深度遍历  先遍历父亲  再遍历孩子
 	const patchKeyedChildren = (c1, c2, el) => {
-		// 全量的diff算法  比对过程是深度遍历  先遍历父亲  再遍历孩子
 		let e1 = c1.length - 1
 		let e2 = c2.length - 1
 		let i = 0
 
-		// 从前往后比
+		// 从前往后比：找到复用的节点
 		while (i <= e1 && i <= e2) {
 			const n1 = c1[i]
 			const n2 = c2[i]
 			if (isSameVNodeType(n1, n2)) {
 				// 深度遍历
-				patch(n1, n2, el) // 为什么是 patch，而不是直接调用 patchElement(n1,n2)？
+				patch(n1, n2, el)
 			} else {
 				break
 			}
 			i++
 		}
 
-		// 从后往前比
+		// 从后往前比：找到复用的节点
 		while (i <= e1 && i <= e2) {
 			const n1 = c1[e1]
 			const n2 = c2[e2]
@@ -122,9 +123,9 @@ export function createRenderer(options) {
 			e2--
 		}
 		// i  e1  e2
-		// e1 < i 时：表示新旧对比后，发现需要插入，而需要插入的是新的中从 i ~ e2
+		// i > e1 时：表示新旧对比后，旧的全都被复用了，发现需要插入，而需要插入的是新的中从 i ~ e2
 
-		//单纯的新增被称为：同序列挂载
+		// 单纯的新增：同序列挂载
 		// 老的少，新的多，老的在新的里全部复用
 		// a b c
 		// a b c d
@@ -154,11 +155,12 @@ export function createRenderer(options) {
 				unmount(c1[i])
 				i++
 			}
-		} else {
-			// unkonwn sequence patch
-			// a b [c d e] f g
-			// a b [e c d h] f g
+		}
 
+		// unkonwn sequence patch
+		// a b [c d e] f g
+		// a b [e c d h] f g
+		else {
 			let s1 = i // 老的中：s1 -> e1  c d e
 			let s2 = i // 新的中：s2 -> e2  e c d h
 
@@ -176,11 +178,12 @@ export function createRenderer(options) {
 			for (let i = s1; i <= e1; i++) {
 				const oldChild = c1[i]
 				const newIndex = keyToNewIndexMap.get(oldChild.key) // 老节点在新的中的可能索引
+				// 1. 老节点在新的中不存在，需要卸载
 				if (newIndex == undefined) {
-					// 该老节点在新的中不存在，需要卸载
 					unmount(oldChild)
-				} else {
-					// 老的节点在新的中存在
+				}
+				// 2. 老的节点在新的中存在，复用节点，更新props和children
+				else {
 					// 1. 记录在老的中的位置
 					newIndexToOldIndexMap[newIndex - s2] = i + 1
 					// 2. 复用节点
@@ -201,9 +204,12 @@ export function createRenderer(options) {
 				const opIndex = s2 + i
 				const opChild = c2[opIndex]
 				const anchor = opIndex + 1 < c2.length ? c2[opIndex + 1].el : null
+				// 新的中有，老的中没有，插入
 				if (newIndexToOldIndexMap[i] === 0) {
 					patch(null, opChild, el, anchor)
-				} else {
+				}
+				// 新的老的都有,移动位置
+				else {
 					// 倒序插入，比较暴力，整个都做了移动
 					// hostInsert(opChild.el, el, anchor)
 					if (i !== increasingSeq[j]) {
@@ -226,7 +232,6 @@ export function createRenderer(options) {
 
 		// 新:文本
 		if (nextShapeFlag & shapeFlags.TEXT_CHILDREN) {
-			// 旧：数组
 			if (prevShapeFlag & shapeFlags.ARRAY_CHILDREN) {
 				unmountChildren(c1)
 			}
@@ -248,9 +253,10 @@ export function createRenderer(options) {
 				if (prevShapeFlag & shapeFlags.TEXT_CHILDREN) {
 					hostSetElementText(container, '')
 				}
-				mountChildren(c2, container)
+				mountChildren(c2, container, parent)
 			}
 		}
+
 		// 新:空
 		if (c2 == null) {
 			if (prevShapeFlag & shapeFlags.ARRAY_CHILDREN) {
@@ -267,41 +273,44 @@ export function createRenderer(options) {
 		const oldProps = n1.props || {}
 		const newProps = n2.props || {}
 
-		// 对比新旧props
+		// 对比新旧 props，更新 props
 		patchProps(el, oldProps, newProps)
 
-		// 对比新旧children
+		// 对比新旧 children，更新 children
 		patchChildren(n1, n2, el)
 	}
 
-	const mountElement = (vnode, container, anchor) => {
+	const mountElement = (vnode, container, anchor, parent) => {
 		const { type, props, children, shapeFlag } = vnode
-		// 创建元素
+		// 1. 创建元素，并存到 vnode 上
 		const el = (vnode.el = hostCreateElement(type))
-		// 设置属性
+
+		// 2. 设置属性
 		if (props) {
 			for (let key in props) {
 				hostPatchProp(el, key, null, props[key])
 			}
 		}
-		// 处理子节点
-		// children 要么是数组要么是文本
+
+		// 3. 处理子节点：children 要么是数组要么是文本
 		if (shapeFlag & shapeFlags.TEXT_CHILDREN) {
 			hostSetElementText(el, children)
 		} else if (shapeFlag & shapeFlags.ARRAY_CHILDREN) {
-			mountChildren(children, el)
+			mountChildren(children, el, parent)
 		}
-		// 添加到页面显示
+
+		// 4. 添加到页面显示
 		hostInsert(el, container, anchor) // 插入真实dom
 	}
 
-	const processElement = (n1, n2, container, anchor) => {
+	const processElement = (n1, n2, container, anchor, parent) => {
+		// 该类型的 vnode 是初次渲染
 		if (n1 === null) {
-			// 该类型的 vnode 是初次渲染
-			mountElement(n2, container, anchor)
-		} else {
-			// 复用节点
-			// diff 更新：对比两个虚拟节点，得到差异，然后更新dom
+			mountElement(n2, container, anchor, parent)
+		}
+		// 复用节点
+		// diff 更新：对比两个虚拟节点，得到差异，然后更新dom
+		else {
 			patchElement(n1, n2)
 		}
 	}
@@ -309,36 +318,42 @@ export function createRenderer(options) {
 	const processText = (n1, n2, container) => {
 		// debugger
 		let el
+		// 初次渲染
 		if (n1 == null) {
-			// 该类型的 vnode 是初次渲染
 			// 创建文本元素
-			// console.dir((n2.el = hostCreateText(n2.children)))
 			el = n2.el = hostCreateText(n2.children)
+			// 添加到页面显示
 			hostInsert(el, container)
 		} else {
 			// 复用节点
 			el = n2.el = n1.el
+			// 文本更新
 			if (n1.children !== n2.children) {
-				hostSetText(el, n2.children) // 文本更新
+				hostSetText(el, n2.children)
 			}
 		}
 	}
 
-	const processFragment = (n1, n2, container) => {
+	const processFragment = (n1, n2, container, parent) => {
+		// Fragment 类型的虚拟节点实际要渲染到页面上的是它的 children
 		if (n1 == null) {
-			mountChildren(n2.children, container)
+			mountChildren(n2.children, container, parent)
 		} else {
 			patchKeyedChildren(n1.children, n2.children, container)
 		}
 	}
 
-	const mountComponent = (vnode, container, anchor) => {
+	const mountComponent = (vnode, container, anchor, parent) => {
+		// 组件实际被渲染到页面的是组件封装的 UI 结构的虚拟节点 subTree
+		// 组件虚拟节点中, props 是传给组件的所有属性props, children 是组件的插槽
+		// 所有属性中,被组件声明了的称为组件 props, 未被声明的称为 attrs
 		// vnode 指的是组件的虚拟节点  要渲染的 vnode 中 render 函数返回的虚拟节点 subTree
-		// 1)创建组件实例对象，记录组件一些数据
-		const instance = (vnode.component = createComponentInstane(vnode))
-		// 2）组件实例初始化，设置属性等数据
+
+		// 1) 根据组件 vnode 创建组件实例，并将组件实例记录到组件虚拟节点的 component 属性上
+		const instance = (vnode.component = createComponentInstane(vnode, parent))
+		// 2）根据 vnode 中存放的信息，初始化组件实例，设置属性等数据
 		setupComponent(instance)
-		// 3）创建组件 effect，收集依赖
+		// 3）创建组件渲染 effect，收集依赖
 		setupRenderEffect(instance, container, anchor)
 	}
 
@@ -350,8 +365,7 @@ export function createRenderer(options) {
 	}
 	const updateComponentPreRender = (instance, nextVNode) => {
 		instance.nextVNode = null
-		instance.vnode = nextVNode // 更新实例的虚拟节点未新的虚拟节点
-		debugger
+		instance.vnode = nextVNode // 更新实例的虚拟节点为新的虚拟节点
 		updateProps(instance, nextVNode.props) // 更新组件 props
 		updateSlots(instance, nextVNode.children) // 更新插槽
 	}
@@ -370,7 +384,7 @@ export function createRenderer(options) {
 			// 1. 组件初次挂载
 			if (!instance.isMounted) {
 				const subTree = render.call(instance.proxy, instance.proxy) // 获取组件要被渲染的UI结构的虚拟节点，改变 this 指向为组件实例的代理
-				patch(null, subTree, container, anchor) // 渲染虚拟节点
+				patch(null, subTree, container, anchor, instance) // 渲染虚拟节点
 				instance.subTree = subTree // 组件实例缓存第一次渲染产生的 vnode
 				instance.isMounted = true // 标志组件已经挂载过
 			}
@@ -425,8 +439,8 @@ export function createRenderer(options) {
 	}
 
 	const updateComponent = (n1, n2) => {
-		debugger
 		const instance = (n2.component = n1.component) // 复用组件实例
+
 		// 根据组件属性与插槽是否改变，来判断是否应该进行更新属性与插槽
 		if (shouldUpdateComponent(n1, n2)) {
 			// 更新组件属性 插槽  根据新的组件虚拟节点
@@ -435,29 +449,22 @@ export function createRenderer(options) {
 		}
 	}
 
-	const processComponent = (n1, n2, container, anchor) => {
+	const processComponent = (n1, n2, container, anchor, parent) => {
+		// 组件初次渲染
 		if (n1 === null) {
-			// 组件初次渲染
-			mountComponent(n2, container, anchor)
-		} else {
-			// 组件更新: 组件实例复用，更新组件的属性、插槽等
+			mountComponent(n2, container, anchor, parent)
+		}
+		// 组件更新: 组件实例复用，更新组件的属性、插槽等
+		else {
 			updateComponent(n1, n2)
 		}
 	}
 
-	/**
-	 * patch 函数：根据传入的新旧 vnode，确定是要进行初次渲染新的vnode，还是要diff新旧
-	 * @param n1 旧 vnode
-	 * @param n2 新 vnode
-	 * @param container 要被渲染到的 dom 容器
-	 * @param anchor
-	 * @returns
-	 */
-	// 每增加一种类型：如 文本、元素... 考虑三方面：初次渲染，复用节点进行对比更新，卸载节点
-	const patch = (n1, n2, container, anchor = null) => {
+	// 每种类型：如 文本、元素、组件等，考虑三方面：初次渲染，复用更新，卸载
+	const patch = (n1, n2, container, anchor = null, parent = null) => {
 		if (n1 === n2) return
 
-		// 处理旧节点：判断旧节点要不要卸载
+		// 处理旧节点：判断旧节点要不要卸载：新旧类型不一样，卸载旧的
 		// n1 有并 n1 与 n2 不是相同类型 vnode ，则要卸载 n1 后去渲染 n2
 		if (n1 && !isSameVNodeType(n1, n2)) {
 			unmount(n1)
@@ -472,14 +479,16 @@ export function createRenderer(options) {
 				processText(n1, n2, container)
 				break
 			case Fragment:
-				processFragment(n1, n2, container)
+				processFragment(n1, n2, container, parent)
 				break
 			default:
 				// 处理元素
 				if (shapeFlag & shapeFlags.ELEMENT) {
-					processElement(n1, n2, container, anchor)
-				} else if (shapeFlag & shapeFlags.COMPONENT) {
-					processComponent(n1, n2, container, anchor)
+					processElement(n1, n2, container, anchor, parent)
+				}
+				// 处理组件
+				else if (shapeFlag & shapeFlags.COMPONENT) {
+					processComponent(n1, n2, container, anchor, parent)
 				}
 		}
 	}
