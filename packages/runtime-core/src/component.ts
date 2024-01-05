@@ -2,6 +2,7 @@ import { proxyRefs, reactive } from '@vue/reactivity'
 import { hasOwn, isFunction } from '@vue/shared'
 import { shapeFlags } from 'packages/shared/src/shapeFlags'
 import { initProps } from './componentProps'
+import { initSlots } from './slots'
 
 export function createComponentInstane(vnode, parent) {
 	//  组件实例
@@ -65,14 +66,6 @@ const PublicInstanceProxyHandlers = {
 		}
 		return true
 	},
-}
-
-function initSlots(instance, children) {
-	if (children) {
-		if (instance.vnode.shapeFlag & shapeFlags.SLOTS_CHILDREN) {
-			instance.slots = children // 插槽绑定到实例上
-		}
-	}
 }
 
 export let currentInstance // 当前正在执行组件实例

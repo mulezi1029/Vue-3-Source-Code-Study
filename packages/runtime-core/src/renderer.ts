@@ -6,6 +6,7 @@ import { shapeFlags } from 'packages/shared/src/shapeFlags'
 import { createComponentInstane, setupComponent } from './component'
 import { hasPropsChanged, initProps, updateProps } from './componentProps'
 import { queueJob } from './scheduler'
+import { updateSlots } from './slots'
 import { Fragment, isSameVNodeType, Text } from './vnode'
 // 渲染器用于将生成的虚拟节点转为平台的真实DOM
 export function createRenderer(options) {
@@ -357,12 +358,6 @@ export function createRenderer(options) {
 		setupRenderEffect(instance, container, anchor)
 	}
 
-	const updateSlots = (instance, nextSlots) => {
-		if (nextSlots) {
-			instance.slots = nextSlots
-			// Object.assign(instance.slots, nextSlots)
-		}
-	}
 	const updateComponentPreRender = (instance, nextVNode) => {
 		instance.nextVNode = null
 		instance.vnode = nextVNode // 更新实例的虚拟节点为新的虚拟节点
