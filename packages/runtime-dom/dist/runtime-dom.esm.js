@@ -630,8 +630,9 @@ var KeepAliveCopmImpl = {
   name: "keep-alive",
   __isKeepAlive: true,
   props: {
-    includes: [],
-    excludes: []
+    includes: String,
+    excludes: String,
+    max: Number
   },
   setup(props, { slots }) {
     let pendingKey;
@@ -656,15 +657,40 @@ var KeepAliveCopmImpl = {
       move(vnode, storageContainer);
       vnode.shapeFlag |= 512 /* COMPONENT_KEPT_ALIVE */;
     };
+    const purneCacheEntry = (key) => {
+      const cached = cache.get(key);
+      cache.delete(key);
+      keys.delete(key);
+      _unmount(cached);
+    };
+    const _unmount = (vnode) => {
+      let { shapeFlag } = vnode;
+      if (shapeFlag & 512 /* COMPONENT_KEPT_ALIVE */) {
+        shapeFlag -= 512 /* COMPONENT_KEPT_ALIVE */;
+      }
+      if (shapeFlag & 256 /* COMPONENT_SHOULD_KEEP_ALIVE */) {
+        shapeFlag -= 256 /* COMPONENT_SHOULD_KEEP_ALIVE */;
+      }
+      vnode.shapeFlag = shapeFlag;
+      instance.ctx.renderer.unmount(vnode);
+    };
     const render2 = () => {
       const vnode = slots.default();
       if (!isVNode(vnode) || !(vnode.shapeFlag & 4 /* STATEFUL_COMPONENT */)) {
+        return vnode;
+      }
+      const { includes, excludes, max } = props;
+      const name = vnode.type.name;
+      if (includes && !includes.split(",").includes(name) || excludes && excludes.split(",").includes(name)) {
         return vnode;
       }
       const compObj = vnode.type;
       const key = pendingKey = vnode?.props?.key == null ? compObj : vnode?.props?.key;
       const hasCached = cache.has(key);
       if (!hasCached) {
+        if (max && keys.size >= max) {
+          purneCacheEntry(keys.values().next().value);
+        }
         keys.add(key);
       } else {
         const cacheVnode = cache.get(key);
@@ -991,7 +1017,8 @@ function createRenderer(options) {
         createElement: hostCreateElement,
         move(vnode2, container2) {
           hostInsert(vnode2.component.subTree.el, container2);
-        }
+        },
+        unmount
       };
     }
     setupComponent(instance);

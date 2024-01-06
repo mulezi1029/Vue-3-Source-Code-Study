@@ -444,6 +444,7 @@ export function createRenderer(options) {
 				move(vnode, container) {
 					hostInsert(vnode.component.subTree.el, container)
 				},
+				unmount,
 			}
 		}
 

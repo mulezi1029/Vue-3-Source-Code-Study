@@ -28,15 +28,6 @@
         return h('div', 'my1')
       }
     }
-    const a = {
-      de: () => h(My1)
-    }
-    console.log(a.de() == a.de())
-
-    render(h(KeepAlive, null, {
-      default: () => h(My1)
-    }), app)
-
     const My2 = {
       name: 'my2',
       setup() {
@@ -49,15 +40,32 @@
         return h('div', 'my2')
       }
     }
+    const My3 = {
+      name: 'my3',
+      setup() {
+        onMounted(() => {
+          console.log('m3 onmounted')
+        })
+        return {}
+      },
+      render() {
+        return h('div', 'my3')
+      }
+    }
+
+    render(h(KeepAlive, { includes: 'my1', max: 2 }, {
+      default: () => h(My1)
+    }), app)
+
 
     setTimeout(() => {
-      render(h(KeepAlive, null, {
+      render(h(KeepAlive, { includes: 'my2', max: 2 }, {
         default: () => h(My2)
       }), app)
 
       setTimeout(() => {
-        render(h(KeepAlive, null, {
-          default: () => h(My1, { a: 1 })
+        render(h(KeepAlive, { includes: 'my3', max: 2 }, {
+          default: () => h(My3)
         }), app)
       }, 2000);
 
