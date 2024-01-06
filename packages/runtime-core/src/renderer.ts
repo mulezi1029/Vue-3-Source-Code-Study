@@ -5,6 +5,7 @@ import { hasOwn, invokeArrayFns } from '@vue/shared'
 import { shapeFlags } from 'packages/shared/src/shapeFlags'
 import { createComponentInstane, setupComponent } from './component'
 import { hasPropsChanged, initProps, updateProps } from './componentProps'
+import { isKeepAlive } from './KeepAlive'
 import { queueJob } from './scheduler'
 import { updateSlots } from './slots'
 import { Fragment, isSameVNodeType, Text } from './vnode'
@@ -32,7 +33,7 @@ export function createRenderer(options) {
 	const unmountChildren = (children) => {
 		for (let i = 0; i < children.length; i++) {
 			const child = children[i]
-			unmount(child)
+			unmount(child, parent)
 		}
 	}
 
@@ -153,7 +154,7 @@ export function createRenderer(options) {
 		// 		 c d
 		else if (i > e2) {
 			while (i <= e1) {
-				unmount(c1[i])
+				unmount(c1[i], parent)
 				i++
 			}
 		}
@@ -181,7 +182,7 @@ export function createRenderer(options) {
 				const newIndex = keyToNewIndexMap.get(oldChild.key) // 老节点在新的中的可能索引
 				// 1. 老节点在新的中不存在，需要卸载
 				if (newIndex == undefined) {
-					unmount(oldChild)
+					unmount(oldChild, parent)
 				}
 				// 2. 老的节点在新的中存在，复用节点，更新props和children
 				else {
@@ -352,6 +353,17 @@ export function createRenderer(options) {
 
 		// 1) 根据组件 vnode 创建组件实例，并将组件实例记录到组件虚拟节点的 component 属性上
 		const instance = (vnode.component = createComponentInstane(vnode, parent))
+
+		// 如果是 keep-alive 组件的虚拟节点，其组件实例上额外处理
+		if (isKeepAlive(vnode)) {
+			;(instance.ctx as any).renderer = {
+				createElement: hostCreateElement,
+				move(vnode, container) {
+					hostInsert(vnode.component.subTree.el, container)
+				},
+			}
+		}
+
 		// 2）根据 vnode 中存放的信息，初始化组件实例，设置属性等数据
 		setupComponent(instance)
 		// 3）创建组件渲染 effect，收集依赖
@@ -372,7 +384,6 @@ export function createRenderer(options) {
 			// 1. 组件初次挂载
 			if (!instance.isMounted) {
 				const { bm, m } = instance // 获取组件实例的钩子函数
-
 				// 组件挂载之前，调用 bm 钩子：此时调用钩子时 setup 函数早已运行完成，currentInstance 已经清空了
 				if (bm) {
 					invokeArrayFns(bm) // 此时执行钩子函数，是在 setup函数执行后的，全局记录组件实例的都清空了，获取不到了组件实例，需要再次进行处理
@@ -381,13 +392,11 @@ export function createRenderer(options) {
 				patch(null, subTree, container, anchor, instance) // 渲染虚拟节点
 				instance.subTree = subTree // 组件实例缓存第一次渲染产生的 vnode
 				instance.isMounted = true // 标志组件已经挂载过
-
 				// 组件挂载完成执行钩子
 				if (m) {
 					invokeArrayFns(m)
 				}
 			}
-
 			// 2. 组件非初次挂载
 			else {
 				const { bu, u } = instance
@@ -407,7 +416,6 @@ export function createRenderer(options) {
 				// 组件状态更新
 				patch(instance.subTree, subTree, container, anchor, instance)
 				instance.subTree = subTree // 组件更新产生的新 vnode
-
 				// 组件更新后钩子
 				if (u) {
 					invokeArrayFns(u)
@@ -444,8 +452,13 @@ export function createRenderer(options) {
 	}
 
 	const processComponent = (n1, n2, container, anchor, parent) => {
-		// 组件初次渲染
 		if (n1 === null) {
+			// 重新进入被缓存的组件
+			if (n2.shapeFlag & shapeFlags.COMPONENT_KEPT_ALIVE) {
+				debugger
+				return parent.ctx.activate(n2, container, anchor)
+			}
+			// 组件初次渲染
 			mountComponent(n2, container, anchor, parent)
 		}
 		// 组件更新: 组件实例复用，更新组件的属性、插槽等
@@ -461,7 +474,7 @@ export function createRenderer(options) {
 		// 处理旧节点：判断旧节点要不要卸载：新旧类型不一样，卸载旧的
 		// n1 有并 n1 与 n2 不是相同类型 vnode ，则要卸载 n1 后去渲染 n2
 		if (n1 && !isSameVNodeType(n1, n2)) {
-			unmount(n1)
+			unmount(n1, parent)
 			n1 = null
 		}
 
@@ -487,8 +500,8 @@ export function createRenderer(options) {
 		}
 	}
 
-	const unmountComponent = (subTree) => {
-		return unmount(subTree)
+	const unmountComponent = (subTree, parent) => {
+		return unmount(subTree, parent)
 	}
 
 	// 页面中删除 vnode 对应的节点:
@@ -496,28 +509,37 @@ export function createRenderer(options) {
 	// 2. Text --> 卸载 el
 	// 3. Element --> 卸载 el
 	// 4. Component --> 卸载 subTree
-	const unmount = (vnode) => {
-		const { shapeFlag } = vnode
+	const unmount = (vnode, parent) => {
 		// 删除 vnode 对应在页面上的真实节点
 		// 如果 vnode 标识的节点本身也被渲染在页面上，就删除其对应的节点
 		// 如果 vnode 本身标识的结构实际上不被渲染到页面，页面上渲染的是 vnode 的 children，则要卸载其 children
+		const { shapeFlag } = vnode
+
+		// 如果要被卸载的是被 keep-alive 缓存的组件节点，则不实际卸载，而是将其移动到页面看不见的位置
+		if (shapeFlag & shapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
+			// 将真实dom隐藏而不是卸载
+			// 找到被卸载的组件的父组件
+			parent.ctx.deActivate(vnode)
+			return
+		}
+
 		if (vnode.type === Fragment) {
 			return unmountChildren(vnode.children) // 递归删除子节点
 		} else if (shapeFlag & shapeFlags.COMPONENT) {
 			// 卸载组件
-			return unmountComponent(vnode.component.subTree)
+			return unmountComponent(vnode.component.subTree, parent)
 		}
 
 		hostRemove(vnode.el) // 删除节点
 	}
 
 	/* 渲染器：将 vnode 变为真实 DOM 渲染到 container 中*/
-	const render = (vnode, container) => {
+	const render = (vnode, container, parent = null) => {
 		// 卸载：删除节点
 		if (vnode === null) {
 			// 渲染过才能够卸载
 			if (container._vnode) {
-				unmount(container._vnode)
+				unmount(container._vnode, parent)
 			}
 		}
 		// 初次渲染或者更新

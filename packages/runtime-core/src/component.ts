@@ -28,6 +28,7 @@ export function createComponentInstane(vnode, parent) {
 		exposed: null, // ref 模板引用时，获取组件实例暴露处的内容
 		parent: parent, // 记录父组件实例
 		provides: parent ? parent.provides : Object.create(null), // 记录父组件提供的内容
+		ctx: {}, // 只对于 keep-alive 内置组件有作用
 	}
 	return instance
 }
@@ -74,7 +75,7 @@ export function setCurrentInstance(instance) {
 	currentInstance = instance
 }
 
-export function getCurrentInstance(instance) {
+export function getCurrentInstance() {
 	return currentInstance
 }
 

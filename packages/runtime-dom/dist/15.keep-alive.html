@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equivh(VueComp)"X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+
+<body>
+  <div id="app"></div>
+  <script type="module">
+    import { h, render, Text, Fragment, provide, reactive, toRef, inject, getCurrentInstance, onMounted, KeepAlive } from './runtime-dom.esm.js'
+
+
+
+    // My1 是要被缓存的组件，要被 keepAlive 缓存的组件是作为 keepAlive 组件的插槽传入
+    const My1 = {
+      name: 'my1',
+      setup() {
+        onMounted(() => {
+          console.log('m1 onmounted')
+        })
+        return {}
+      },
+      render() {
+        return h('div', 'my1')
+      }
+    }
+    const a = {
+      de: () => h(My1)
+    }
+    console.log(a.de() == a.de())
+
+    render(h(KeepAlive, null, {
+      default: () => h(My1)
+    }), app)
+
+    const My2 = {
+      name: 'my2',
+      setup() {
+        onMounted(() => {
+          console.log('m2 onmounted')
+        })
+        return {}
+      },
+      render() {
+        return h('div', 'my2')
+      }
+    }
+
+    setTimeout(() => {
+      render(h(KeepAlive, null, {
+        default: () => h(My2)
+      }), app)
+
+      setTimeout(() => {
+        render(h(KeepAlive, null, {
+          default: () => h(My1, { a: 1 })
+        }), app)
+      }, 2000);
+
+    }, 2000);
+
+
+  </script>
+
+</body>
+
+</html>

@@ -3,7 +3,6 @@ import { currentInstance } from './component'
 
 // provide 与 inject 只能在 setup 中使用
 export function provide(key, value) {
-	debugger
 	if (currentInstance) {
 		// 每个组件实例都有自己的 provides，且其初始值来源于父级的 provides
 		let provides = currentInstance.provides // 获取当前实例的 provides
