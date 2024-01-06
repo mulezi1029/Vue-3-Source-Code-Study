@@ -437,7 +437,9 @@ function createComponentInstane(vnode, parent2) {
   const instance = {
     data: null,
     isMounted: false,
+    // 标识组件是否是初次挂载
     vnode,
+    // 组件 vnode
     subTree: null,
     // 组件实际渲染的是其封装的 UI 结构， subTree 就是对应封装的 UI 结构的虚拟节点
     update: null,
@@ -450,24 +452,25 @@ function createComponentInstane(vnode, parent2) {
     // 组件声明的 props 选项，根据这个和所有的 props，设置 props和attrs
     proxy: null,
     // 组件实例的代理， this 指向整合，可以访问到 data 也可以 props
-    // 组件生命周期
-    bm: null,
-    m: null,
-    bu: null,
-    u: null,
-    bum: null,
-    um: null,
     slots: null,
     // 组件插槽
     steupState: null,
+    // 组件 setup 函数返回的响应式状态数据
     exposed: null,
     // ref 模板引用时，获取组件实例暴露处的内容
     parent: parent2,
     // 记录父组件实例
     provides: parent2 ? parent2.provides : /* @__PURE__ */ Object.create(null),
     // 记录父组件提供的内容
-    ctx: {}
+    ctx: {},
     // 只对于 keep-alive 内置组件有作用
+    // 组件生命周期
+    bm: null,
+    m: null,
+    bu: null,
+    u: null,
+    bum: null,
+    um: null
   };
   return instance;
 }
@@ -539,15 +542,24 @@ function setupComponent(instance) {
       instance.setupState = proxyRefs(setupRes);
     }
   }
+  if (!instance.render) {
+    instance.render = type.render;
+  }
   let data = type.data;
   if (data) {
     if (isFunction(data)) {
       instance.data = reactive(data.call(instance.proxy));
     }
   }
-  if (!instance.render) {
-    instance.render = type.render;
-  }
+}
+function shouldUpdateComponent(n1, n2) {
+  const { props: prevProps, children: preChildren } = n1;
+  const { props: nextProps, children: nextChildren } = n2;
+  if (preChildren || nextChildren)
+    return true;
+  if (prevProps === nextProps)
+    return false;
+  return hasPropsChanged(prevProps, nextProps);
 }
 
 // packages/runtime-core/src/vnode.ts
@@ -614,9 +626,13 @@ var onBeforeUnmount = createHook("bum" /* BEFORE_UNMOUNT */);
 var onUnmounted = createHook("um" /* UNMOUNTED */);
 
 // packages/runtime-core/src/KeepAlive.ts
-var KeepAliveImpl = {
+var KeepAliveCopmImpl = {
   name: "keep-alive",
   __isKeepAlive: true,
+  props: {
+    includes: [],
+    excludes: []
+  },
   setup(props, { slots }) {
     let pendingKey;
     const keys = /* @__PURE__ */ new Set();
@@ -646,8 +662,7 @@ var KeepAliveImpl = {
         return vnode;
       }
       const compObj = vnode.type;
-      const key = vnode?.props?.key == null ? compObj : vnode?.props?.key;
-      pendingKey = key;
+      const key = pendingKey = vnode?.props?.key == null ? compObj : vnode?.props?.key;
       const hasCached = cache.has(key);
       if (!hasCached) {
         keys.add(key);
@@ -914,25 +929,14 @@ function createRenderer(options) {
       patchKeyedChildren(n1.children, n2.children, container);
     }
   };
-  const mountComponent = (vnode, container, anchor, parent2) => {
-    const instance = vnode.component = createComponentInstane(vnode, parent2);
-    if (isKeepAlive(vnode)) {
-      ;
-      instance.ctx.renderer = {
-        createElement: hostCreateElement,
-        move(vnode2, container2) {
-          hostInsert(vnode2.component.subTree.el, container2);
-        }
-      };
-    }
-    setupComponent(instance);
-    setupRenderEffect(instance, container, anchor);
-  };
   const updateComponentPreRender = (instance, nextVNode) => {
     instance.nextVNode = null;
     instance.vnode = nextVNode;
     updateProps(instance, nextVNode.props);
     updateSlots(instance, nextVNode.children);
+  };
+  const unmountComponent = (subTree, parent2) => {
+    return unmount(subTree, parent2);
   };
   const setupRenderEffect = (instance, container, anchor) => {
     let render3 = instance.render;
@@ -950,11 +954,11 @@ function createRenderer(options) {
           invokeArrayFns(m);
         }
       } else {
-        const { bu, u } = instance;
         const { nextVNode } = instance;
         if (nextVNode) {
           updateComponentPreRender(instance, nextVNode);
         }
+        const { bu, u } = instance;
         if (bu) {
           invokeArrayFns(bu);
         }
@@ -972,15 +976,6 @@ function createRenderer(options) {
     const update = instance.update = effect2.run.bind(effect2);
     update();
   };
-  const shouldUpdateComponent = (n1, n2) => {
-    const { props: prevProps, children: preChildren } = n1;
-    const { props: nextProps, children: nextChildren } = n2;
-    if (preChildren || nextChildren)
-      return true;
-    if (prevProps === nextProps)
-      return false;
-    return hasPropsChanged(prevProps, nextProps);
-  };
   const updateComponent = (n1, n2) => {
     const instance = n2.component = n1.component;
     if (shouldUpdateComponent(n1, n2)) {
@@ -988,10 +983,23 @@ function createRenderer(options) {
       instance.update();
     }
   };
+  const mountComponent = (vnode, container, anchor, parent2) => {
+    const instance = vnode.component = createComponentInstane(vnode, parent2);
+    if (isKeepAlive(vnode)) {
+      ;
+      instance.ctx.renderer = {
+        createElement: hostCreateElement,
+        move(vnode2, container2) {
+          hostInsert(vnode2.component.subTree.el, container2);
+        }
+      };
+    }
+    setupComponent(instance);
+    setupRenderEffect(instance, container, anchor);
+  };
   const processComponent = (n1, n2, container, anchor, parent2) => {
     if (n1 === null) {
       if (n2.shapeFlag & 512 /* COMPONENT_KEPT_ALIVE */) {
-        debugger;
         return parent2.ctx.activate(n2, container, anchor);
       }
       mountComponent(n2, container, anchor, parent2);
@@ -1021,9 +1029,6 @@ function createRenderer(options) {
           processComponent(n1, n2, container, anchor, parent2);
         }
     }
-  };
-  const unmountComponent = (subTree, parent2) => {
-    return unmount(subTree, parent2);
   };
   const unmount = (vnode, parent2) => {
     const { shapeFlag } = vnode;
@@ -1217,7 +1222,7 @@ var render = (vnode, container) => {
 };
 export {
   Fragment,
-  KeepAliveImpl as KeepAlive,
+  KeepAliveCopmImpl as KeepAlive,
   LifeCycleHooks,
   ReactieEffect,
   ReactiveFlags,
@@ -1253,6 +1258,7 @@ export {
   render,
   setCurrentInstance,
   setupComponent,
+  shouldUpdateComponent,
   toRef,
   toRefs,
   track,

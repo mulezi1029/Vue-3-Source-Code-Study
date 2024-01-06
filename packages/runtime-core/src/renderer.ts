@@ -3,7 +3,7 @@
 import { ReactieEffect, reactive } from '@vue/reactivity'
 import { hasOwn, invokeArrayFns } from '@vue/shared'
 import { shapeFlags } from 'packages/shared/src/shapeFlags'
-import { createComponentInstane, setupComponent } from './component'
+import { createComponentInstane, setupComponent, shouldUpdateComponent } from './component'
 import { hasPropsChanged, initProps, updateProps } from './componentProps'
 import { isKeepAlive } from './KeepAlive'
 import { queueJob } from './scheduler'
@@ -345,36 +345,15 @@ export function createRenderer(options) {
 		}
 	}
 
-	const mountComponent = (vnode, container, anchor, parent) => {
-		// 组件实际被渲染到页面的是组件封装的 UI 结构的虚拟节点 subTree
-		// 组件虚拟节点中, props 是传给组件的所有属性props, children 是组件的插槽
-		// 所有属性中,被组件声明了的称为组件 props, 未被声明的称为 attrs
-		// vnode 指的是组件的虚拟节点  要渲染的 vnode 中 render 函数返回的虚拟节点 subTree
-
-		// 1) 根据组件 vnode 创建组件实例，并将组件实例记录到组件虚拟节点的 component 属性上
-		const instance = (vnode.component = createComponentInstane(vnode, parent))
-
-		// 如果是 keep-alive 组件的虚拟节点，其组件实例上额外处理
-		if (isKeepAlive(vnode)) {
-			;(instance.ctx as any).renderer = {
-				createElement: hostCreateElement,
-				move(vnode, container) {
-					hostInsert(vnode.component.subTree.el, container)
-				},
-			}
-		}
-
-		// 2）根据 vnode 中存放的信息，初始化组件实例，设置属性等数据
-		setupComponent(instance)
-		// 3）创建组件渲染 effect，收集依赖
-		setupRenderEffect(instance, container, anchor)
-	}
-
 	const updateComponentPreRender = (instance, nextVNode) => {
 		instance.nextVNode = null
 		instance.vnode = nextVNode // 更新实例的虚拟节点为新的虚拟节点
 		updateProps(instance, nextVNode.props) // 更新组件 props
 		updateSlots(instance, nextVNode.children) // 更新插槽
+	}
+
+	const unmountComponent = (subTree, parent) => {
+		return unmount(subTree, parent)
 	}
 
 	const setupRenderEffect = (instance, container, anchor) => {
@@ -383,40 +362,46 @@ export function createRenderer(options) {
 		const componentFn = () => {
 			// 1. 组件初次挂载
 			if (!instance.isMounted) {
-				const { bm, m } = instance // 获取组件实例的钩子函数
+				// 获取组件实例注册的有关挂载的钩子函数
+				const { bm, m } = instance
 				// 组件挂载之前，调用 bm 钩子：此时调用钩子时 setup 函数早已运行完成，currentInstance 已经清空了
+				// 但是注册钩子函数是在 setup 函数中进行的，注册时可以获取到组件实例，利用闭包的特性可以使得生命周期钩子函数在调用时访问到组件实例
 				if (bm) {
 					invokeArrayFns(bm) // 此时执行钩子函数，是在 setup函数执行后的，全局记录组件实例的都清空了，获取不到了组件实例，需要再次进行处理
 				}
-				const subTree = render.call(instance.proxy, instance.proxy) // 获取组件要被渲染的UI结构的虚拟节点，改变 this 指向为组件实例的代理
-				patch(null, subTree, container, anchor, instance) // 渲染虚拟节点
-				instance.subTree = subTree // 组件实例缓存第一次渲染产生的 vnode
-				instance.isMounted = true // 标志组件已经挂载过
-				// 组件挂载完成执行钩子
+				// 调用组件 render 函数获取实际要被渲染的 UI 结构的虚拟节点 subTree，同时改变函数内 this 指向为组件实例的代理
+				const subTree = render.call(instance.proxy, instance.proxy)
+				// 渲染 subTree 虚拟节点
+				patch(null, subTree, container, anchor, instance)
+				// 组件实例缓存第一次渲染产生的 vnode
+				instance.subTree = subTree
+				// 标志组件已经挂载过
+				instance.isMounted = true
+				// 组件挂载完成执行 mounted 钩子
 				if (m) {
 					invokeArrayFns(m)
 				}
 			}
-			// 2. 组件非初次挂载
+			// 2. 组件非初次挂载：更新
+			// 组件更新：1. 组件本身的属性、插槽变化引起的更新  2. 组件内依赖的状态变化引起的更新
 			else {
-				const { bu, u } = instance
-				// 组件更新：1. 组件本身的属性、插槽变化引起的更新  2. 组件内依赖的状态变化引起的更新
+				// 实例上解构出新的组件的虚拟节点，依据新的组件虚拟节点更新组件属性与插槽
 				const { nextVNode } = instance
 				if (nextVNode) {
 					// 更新组件属性、插槽
 					updateComponentPreRender(instance, nextVNode)
 				}
-
+				// 获取组件实例上注册的有关组件更新的钩子函数
+				const { bu, u } = instance
 				// 组件更新前钩子
 				if (bu) {
 					invokeArrayFns(bu)
 				}
-
 				const subTree = render.call(instance.proxy, instance.proxy) // 获取组件要被渲染的新节点 this 指向组件实例的代理
 				// 组件状态更新
 				patch(instance.subTree, subTree, container, anchor, instance)
-				instance.subTree = subTree // 组件更新产生的新 vnode
-				// 组件更新后钩子
+				instance.subTree = subTree // 组件更新产生的新 subTree
+				// 调用组件更新完成的钩子函数
 				if (u) {
 					invokeArrayFns(u)
 				}
@@ -432,33 +417,50 @@ export function createRenderer(options) {
 		update() // 执行组件更新
 	}
 
-	const shouldUpdateComponent = (n1, n2) => {
-		const { props: prevProps, children: preChildren } = n1
-		const { props: nextProps, children: nextChildren } = n2 // 组件插槽
-		if (preChildren || nextChildren) return true
-		if (prevProps === nextProps) return false
-		return hasPropsChanged(prevProps, nextProps)
-	}
-
 	const updateComponent = (n1, n2) => {
-		const instance = (n2.component = n1.component) // 复用组件实例
-
+		// 复用组件实例
+		const instance = (n2.component = n1.component)
 		// 根据组件属性与插槽是否改变，来判断是否应该进行更新属性与插槽
 		if (shouldUpdateComponent(n1, n2)) {
-			// 更新组件属性 插槽  根据新的组件虚拟节点
+			// 依据新的组件虚拟节点更新组件属性、插槽
 			instance.nextVNode = n2 // 组件实例记录新的组件虚拟节点
 			instance.update() // 组件 effect 重新执行进行更新
 		}
 	}
 
+	const mountComponent = (vnode, container, anchor, parent) => {
+		// 组件实际被渲染到页面的是组件封装的 UI 结构的虚拟节点，称为： subTree
+		// 在生成组件虚拟节点后, props 是传给组件的所有属性 props, children 是组件的插槽
+		// 所有属性中, 被组件声明了的称为组件 props, 未被声明的称为 attrs
+		// vnode 指的是组件的虚拟节点， 要渲染的是组件虚拟节点 vnode 中 render 函数返回的虚拟节点 subTree
+
+		// 1) 根据组件 vnode 创建组件实例，并将组件实例保存到 vnode 的 component 属性上
+		const instance = (vnode.component = createComponentInstane(vnode, parent))
+
+		// 如果是 keep-alive 组件的虚拟节点，其组件实例上额外处理
+		if (isKeepAlive(vnode)) {
+			;(instance.ctx as any).renderer = {
+				createElement: hostCreateElement,
+				move(vnode, container) {
+					hostInsert(vnode.component.subTree.el, container)
+				},
+			}
+		}
+
+		// 2）根据 vnode 中存放的信息，初始化组件实例，设置属性等数据
+		setupComponent(instance)
+
+		// 3）创建组件渲染 effect，执行渲染组件的过程，同时会收集渲染中使用到依赖
+		setupRenderEffect(instance, container, anchor)
+	}
+
 	const processComponent = (n1, n2, container, anchor, parent) => {
 		if (n1 === null) {
-			// 重新进入被缓存的组件
+			// 组件激活：如果本次渲染的组件虚拟节点是之前被缓存过的组件，则不进行挂载，而是重新将其激活即可
 			if (n2.shapeFlag & shapeFlags.COMPONENT_KEPT_ALIVE) {
-				debugger
 				return parent.ctx.activate(n2, container, anchor)
 			}
-			// 组件初次渲染
+			// 组件初次渲染：本次渲染的组件虚拟节点是第一次渲染，进入挂载逻辑
 			mountComponent(n2, container, anchor, parent)
 		}
 		// 组件更新: 组件实例复用，更新组件的属性、插槽等
@@ -469,10 +471,10 @@ export function createRenderer(options) {
 
 	// 每种类型：如 文本、元素、组件等，考虑三方面：初次渲染，复用更新，卸载
 	const patch = (n1, n2, container, anchor = null, parent = null) => {
-		if (n1 === n2) return
+		if (n1 === n2) return // 新旧虚拟节点完全一样，不做任何操作，直接返回
 
-		// 处理旧节点：判断旧节点要不要卸载：新旧类型不一样，卸载旧的
-		// n1 有并 n1 与 n2 不是相同类型 vnode ，则要卸载 n1 后去渲染 n2
+		// 处理旧节点：判断旧节点要不要卸载：如果新旧虚拟节点的类型不一样，要卸载旧的
+		// 即：n1 有并 n1 与 n2 不是相同类型 vnode ，则要卸载 n1 后去渲染 n2
 		if (n1 && !isSameVNodeType(n1, n2)) {
 			unmount(n1, parent)
 			n1 = null
@@ -485,6 +487,7 @@ export function createRenderer(options) {
 			case Text:
 				processText(n1, n2, container)
 				break
+			// 处理 Fragment
 			case Fragment:
 				processFragment(n1, n2, container, parent)
 				break
@@ -498,10 +501,6 @@ export function createRenderer(options) {
 					processComponent(n1, n2, container, anchor, parent)
 				}
 		}
-	}
-
-	const unmountComponent = (subTree, parent) => {
-		return unmount(subTree, parent)
 	}
 
 	// 页面中删除 vnode 对应的节点:
@@ -526,14 +525,15 @@ export function createRenderer(options) {
 		if (vnode.type === Fragment) {
 			return unmountChildren(vnode.children) // 递归删除子节点
 		} else if (shapeFlag & shapeFlags.COMPONENT) {
-			// 卸载组件
+			// 卸载组件：是卸载组件实例的 subTree
 			return unmountComponent(vnode.component.subTree, parent)
 		}
 
 		hostRemove(vnode.el) // 删除节点
 	}
 
-	/* 渲染器：将 vnode 变为真实 DOM 渲染到 container 中*/
+	/* 渲染器：根据 vnode 取值，生成真实 DOM，并渲染到 container 中 */
+
 	const render = (vnode, container, parent = null) => {
 		// 卸载：删除节点
 		if (vnode === null) {
@@ -542,10 +542,10 @@ export function createRenderer(options) {
 				unmount(container._vnode, parent)
 			}
 		}
-		// 初次渲染或者更新
-		// 初次渲染：要根据 vnode 创建真实的 dom，处理属性，子节点等，最后挂载到页面中
-		// 更新：需要对比先前的 vnode 和新的 vnode，得到差异，然后进行更新 dom
+		// 初次渲染或者更新：
 		else {
+			// 1. 初次渲染：要根据 vnode 创建真实的 dom，处理属性，子节点等，最后挂载到页面中
+			// 2. 更新：复用原来的结构，只需要对比新旧 vnode，得到差异，然后将差异更新到复用的结构上
 			patch(container._vnode || null, vnode, container)
 		}
 		// 渲染后 container 保存被渲染的虚拟节点，后面用于 diff 比对操作
