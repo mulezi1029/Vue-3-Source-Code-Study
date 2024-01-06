@@ -7,7 +7,7 @@ import { onMounted, onUpdated } from './apiLifeCycle'
 // 使用 KeepAlive 组件：KeepAlive 组件内部包裹需要被缓存的组件（被缓存的组件作为 keepalive 组件的插槽）
 // KeepAlive 组件功能：
 // 1. 正常渲染包裹的组件
-// 2. 缓存该组件，在进行卸载时，不实际卸载该组件
+// 2. 缓存该组件，在渲染新组件时，老的组件不会实际去卸载该组件，只是将其移动到一个页面不存在的元素上隐藏起来
 export const KeepAliveCopmImpl = {
 	name: 'keep-alive',
 	__isKeepAlive: true,
@@ -39,7 +39,6 @@ export const KeepAliveCopmImpl = {
 			move(vnode, storageContainer)
 			vnode.shapeFlag |= shapeFlags.COMPONENT_KEPT_ALIVE
 		}
-
 		const purneCacheEntry = (key) => {
 			const cached = cache.get(key) // 获取缓存列表中应该被删除的组件
 			cache.delete(key) // 删除第一个元素对应的缓存组件
@@ -98,7 +97,6 @@ export const KeepAliveCopmImpl = {
 			vnode.shapeFlag |= shapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
 			return vnode
 		}
-
 		// keep-alive 的 render 函数返回被 keep-alive 包裹的组件虚拟节点
 		return render
 	},

@@ -534,7 +534,6 @@ export function createRenderer(options) {
 	}
 
 	/* 渲染器：根据 vnode 取值，生成真实 DOM，并渲染到 container 中 */
-
 	const render = (vnode, container, parent = null) => {
 		// 卸载：删除节点
 		if (vnode === null) {
